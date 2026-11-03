@@ -32,7 +32,83 @@ fn respond(line: &str) -> Value {
     }
 }
 
-#[cfg(feature = "hardware")]
+#[cfg(all(feature = "hardware", target_os = "linux"))]
+fn usb_ids(uevent: &str) -> Option<(u16, u16)> {
+    let id = uevent
+        .lines()
+        .find_map(|line| line.strip_prefix("HID_ID="))?;
+    let parts: Vec<_> = id.split(':').collect();
+    if parts.len() != 3 || parts[0] != "0003" {
+        return None;
+    }
+    Some((
+        u16::from_str_radix(parts[1], 16).ok()?,
+        u16::from_str_radix(parts[2], 16).ok()?,
+    ))
+}
+
+#[cfg(all(feature = "hardware", target_os = "linux"))]
+fn list_devices(id: Value) -> Value {
+    let supported = openmouse_bridge::drivers::detect_mice();
+    let entries = match std::fs::read_dir("/sys/class/hidraw") {
+        Ok(entries) => entries,
+        Err(err) => return error(id, "enumeration_failed", &err.to_string()),
+    };
+    let mut devices: Vec<Value> = Vec::new();
+    for entry in entries.flatten() {
+        let Ok(info) = std::fs::read_to_string(entry.path().join("device/uevent")) else {
+            continue;
+        };
+        let Some((vid, pid)) = usb_ids(&info) else {
+            continue;
+        };
+        let name = info
+            .lines()
+            .find_map(|line| line.strip_prefix("HID_NAME="))
+            .unwrap_or("HID device");
+        let serial = info
+            .lines()
+            .find_map(|line| line.strip_prefix("HID_UNIQ="))
+            .unwrap_or("");
+        let tail = if serial.is_empty() {
+            format!("{vid:04x}:{pid:04x}")
+        } else {
+            serial.to_owned()
+        };
+        let matched = supported.iter().find(|device| {
+            device
+                .device_id
+                .split_once(':')
+                .is_some_and(|(_, value)| value == tail)
+        });
+        let device_id = matched
+            .map(|device| device.device_id.clone())
+            .unwrap_or_else(|| format!("hid:{vid:04x}:{pid:04x}:{serial}"));
+        let path = format!("/dev/{}", entry.file_name().to_string_lossy());
+        // Open only to check access; never send reports while scanning.
+        let denied = std::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(&path)
+            .err()
+            .is_some_and(|err| err.kind() == std::io::ErrorKind::PermissionDenied);
+        if let Some(device) = devices
+            .iter_mut()
+            .find(|device| device["device_id"] == device_id)
+        {
+            if denied {
+                device["permission_required"] = json!(true);
+            }
+            continue;
+        }
+        devices.push(json!({"device_id": device_id, "name": name, "vendor_id": format!("{vid:04x}"),
+            "product_id": format!("{pid:04x}"), "supported": matched.is_some(), "permission_required": denied}));
+    }
+    devices.sort_by(|a, b| a["device_id"].as_str().cmp(&b["device_id"].as_str()));
+    json!({"id": id, "result": devices})
+}
+
+#[cfg(all(feature = "hardware", not(target_os = "linux")))]
 fn list_devices(id: Value) -> Value {
     let devices: Vec<Value> = openmouse_bridge::drivers::detect_mice()
         .into_iter()
@@ -97,4 +173,16 @@ fn main() -> io::Result<()> {
         output.flush()?;
     }
     Ok(())
+}
+
+#[cfg(all(test, feature = "hardware", target_os = "linux"))]
+mod tests {
+    #[test]
+    fn parses_usb_ids_without_requiring_device_access() {
+        assert_eq!(
+            super::usb_ids("HID_ID=0003:0000373B:00001085\nHID_NAME=Mouse\n"),
+            Some((0x373b, 0x1085))
+        );
+        assert_eq!(super::usb_ids("HID_ID=invalid\n"), None);
+    }
 }
