@@ -13,6 +13,21 @@ PluginSettings {
     property var saved: loadValue("devices", [])
     property string selected: loadValue("selectedDeviceId", "")
     property string scanMessage: ""
+    property string permissionFeedback: ""
+
+    function scanDevices() {
+        if (!pluginService || scan.running) return;
+        scanMessage = "";
+        permissionFeedback = "";
+        scan.stdinEnabled = true;
+        scan.running = true;
+    }
+
+    Timer {
+        interval: 50
+        running: root.visible && !!root.pluginService
+        onTriggered: root.scanDevices()
+    }
 
     readonly property var selectedDevice: discovered.find(item => item.device_id === selected) || saved.find(item => item.device_id === selected) || null
     readonly property string permissionCommands: {
@@ -104,17 +119,45 @@ PluginSettings {
         wrapMode: TextEdit.Wrap
         color: Theme.surfaceText
     }
-    DButton {
+    RowLayout {
+        width: parent.width
         visible: root.selectedDevice?.permission_required === true && root.permissionCommands.length > 0
-        text: "复制授权命令"
-        iconName: "content_copy"
-        onClicked: Quickshell.execDetached(["dms", "cl", "copy", root.permissionCommands])
+        spacing: Theme.spacingS
+        DButton {
+            text: "复制授权命令"
+            iconName: "content_copy"
+            onClicked: Quickshell.execDetached(["dms", "cl", "copy", root.permissionCommands])
+        }
+        DButton {
+            text: scan.running ? "检测中…" : "重新检测"
+            iconName: "refresh"
+            enabled: !scan.running
+            onClicked: root.scanDevices()
+        }
+        Item { Layout.fillWidth: true }
     }
-    DButton {
-        text: scan.running ? "扫描中…" : "扫描设备"
-        iconName: "search"
-        enabled: !scan.running && !!root.pluginService
-        onClicked: { root.scanMessage = ""; scan.running = true; }
+    StyledText {
+        width: parent.width
+        visible: root.permissionFeedback.length > 0
+        text: root.permissionFeedback
+        wrapMode: Text.Wrap
+        color: Theme.surfaceVariantText
+        Accessible.role: Accessible.StaticText
+    }
+    RowLayout {
+        width: parent.width
+        StyledText {
+            text: "发现设备"
+            font.pixelSize: Theme.fontSizeLarge
+            color: Theme.surfaceText
+            Layout.fillWidth: true
+        }
+        DButton {
+            text: scan.running ? "扫描中…" : "重新扫描"
+            iconName: "refresh"
+            enabled: !scan.running && !!root.pluginService
+            onClicked: root.scanDevices()
+        }
     }
     StyledText {
         width: parent.width
@@ -166,6 +209,13 @@ PluginSettings {
                     const reply = JSON.parse(text);
                     if (reply.error) throw new Error(reply.error.message);
                     root.discovered = reply.result;
+                    const current = reply.result.find(item => item.device_id === root.selected);
+                    if (root.selected) {
+                        root.permissionFeedback = !current ? "未检测到所选设备，请确认已重新插入" : current.permission_required ? "仍缺少访问权限，请执行命令并拔插设备后重试" : "访问权限正常";
+                    }
+                    const updated = root.saved.map(item => reply.result.find(device => device.device_id === item.device_id) || item);
+                    root.saveValue("devices", updated);
+                    root.saved = updated;
                     root.scanMessage = reply.result.length ? "选择要添加的设备" : "未发现 USB HID 设备，请检查连接";
                 } catch (error) { root.scanMessage = "扫描失败：" + error.message; }
             }
