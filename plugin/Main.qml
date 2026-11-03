@@ -47,7 +47,7 @@ PluginComponent {
         }
     }
     popoutWidth: 360
-    popoutHeight: 240
+    popoutHeight: mouse.message ? 360 : 240
     popoutContent: Component {
         PopoutComponent {
             headerText: mouse.status?.reported_name || "OpenMouse"
@@ -57,8 +57,17 @@ PluginComponent {
                 StyledText {
                     width: parent.width
                     wrapMode: Text.Wrap
-                    text: mouse.status ? root.batteryText + (mouse.status.charging ? " · 正在充电" : "") : mouse.message
+                    text: mouse.status ? root.batteryText + (mouse.status.charging ? " · 正在充电" : "") : "暂无设备数据"
                     color: root.statusColor
+                }
+                StyledText {
+                    width: parent.width
+                    visible: mouse.message.length > 0
+                    wrapMode: Text.Wrap
+                    maximumLineCount: 5
+                    elide: Text.ElideRight
+                    text: (mouse.status ? "刷新失败，显示上次成功数据（" + mouse.lastSuccess + "）\n" : "读取失败\n") + mouse.message
+                    color: Theme.error
                 }
                 StyledText {
                     visible: !!mouse.status

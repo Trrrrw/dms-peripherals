@@ -7,6 +7,7 @@ Item {
     property var status: null
     property string message: "正在连接"
     property bool busy: false
+    property string lastSuccess: ""
 
     function refresh() {
         if (!backend.running || busy)
@@ -33,6 +34,7 @@ Item {
             backend.write(JSON.stringify({id: "status", method: "get_status", device_id: reply.result[0].device_id}) + "\n");
         } else if (reply.id === "status") {
             status = reply.result;
+            lastSuccess = Qt.formatDateTime(new Date(), "MM-dd hh:mm:ss");
             message = "";
             busy = false;
             watchdog.stop();
@@ -40,7 +42,6 @@ Item {
     }
 
     function fail(text) {
-        status = null;
         message = text;
         busy = false;
         watchdog.stop();
