@@ -1,0 +1,20 @@
+{
+    "id": "openMouse",
+    "name": "OpenMouse",
+    "description": "鼠标电量与设备状态",
+    "version": "0.1.0",
+    "author": "trrrrw",
+    "type": "widget",
+    "capabilities": [
+        "dankbar-widget"
+    ],
+    "component": "./Main.qml",
+    "icon": "mouse",
+    "startupCheck": "./StartupCheck.qml",
+    "dependencies": [
+        "node"
+    ],
+    "permissions": [
+        "process"
+    ]
+}
