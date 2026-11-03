@@ -8,6 +8,7 @@ Item {
     onSelectedDeviceIdChanged: {
         status = null;
         lastSuccess = "";
+        message = selectedDeviceId ? "正在连接" : "请在设置中添加设备";
         restore();
         refresh();
     }
@@ -16,7 +17,7 @@ Item {
     onStateStoreChanged: restore()
 
     function restore() {
-        if (!stateStore || status)
+        if (!stateStore || status || !selectedDeviceId)
             return;
         const cached = stateStore.loadPluginState(stateId, "lastReading", null);
         if (!cached || !cached.status || (selectedDeviceId && cached.status.device_id !== selectedDeviceId) || typeof cached.status.battery_percent !== "number" || typeof cached.time !== "string")
@@ -32,6 +33,11 @@ Item {
     property string lastSuccess: ""
 
     function refresh() {
+        if (!selectedDeviceId) {
+            status = null;
+            message = "请在设置中添加设备";
+            return;
+        }
         if (!backend.running || busy)
             return;
         busy = true;
@@ -53,11 +59,11 @@ Item {
                 fail("未发现设备");
                 return;
             }
-            const device = selectedDeviceId ? reply.result.find(item => item.device_id === selectedDeviceId) : reply.result[0];
+            const device = reply.result.find(item => item.device_id === selectedDeviceId);
             if (!device) { fail("所选设备未连接"); return; }
             backend.write(JSON.stringify({id: "status", method: "get_status", device_id: device.device_id}) + "\n");
         } else if (reply.id === "status") {
-            if (selectedDeviceId && reply.result.device_id !== selectedDeviceId) {
+            if (!selectedDeviceId || reply.result.device_id !== selectedDeviceId) {
                 busy = false;
                 watchdog.stop();
                 Qt.callLater(refresh);

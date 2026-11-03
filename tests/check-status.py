@@ -17,8 +17,8 @@ ShellRoot {
         function savePluginState(id, key, data) { value = data; }
         function loadPluginState(id, key, fallback) { return value || fallback; }
     }
-    MouseService { id: mouse; backendPath: ""; stateStore: store }
-    MouseService { id: restored; backendPath: ""; stateStore: store }
+    MouseService { id: mouse; backendPath: ""; selectedDeviceId: "test"; stateStore: store }
+    MouseService { id: restored; backendPath: ""; selectedDeviceId: "test"; stateStore: store }
     Timer { interval: 10; running: true; onTriggered: {
         mouse.fail("initial failure");
         let ok = mouse.status === null;
@@ -29,6 +29,9 @@ ShellRoot {
         ok = ok && mouse.status !== null && mouse.status.battery_percent === 65 && mouse.message === "probe failed";
         mouse.receive(JSON.stringify({id: "status", result: {device_id: "test", battery_percent: 64}}));
         ok = ok && mouse.status.battery_percent === 64 && mouse.message === "";
+        restored.selectedDeviceId = "";
+        restored.restore();
+        ok = ok && restored.status === null;
         restored.selectedDeviceId = "another-device";
         ok = ok && restored.status === null;
         restored.receive(JSON.stringify({id: "status", result: {device_id: "test", battery_percent: 90}}));
