@@ -16,6 +16,17 @@ PluginSettings {
         selected = device.device_id;
         saveValue("selectedDeviceId", selected);
     }
+    function removeDevice(deviceId) {
+        const remaining = saved.filter(item => item.device_id !== deviceId);
+        if (selected === deviceId) {
+            selected = remaining.length ? remaining[0].device_id : "";
+            saveValue("selectedDeviceId", selected);
+        }
+        saveValue("devices", remaining);
+        // Updating the repeater destroys the clicked delegate; keep mutations here.
+        saved = remaining;
+    }
+
     function add(device) {
         if (!saved.some(item => item.device_id === device.device_id)) {
             saved = saved.concat([device]);
@@ -36,14 +47,7 @@ PluginSettings {
             }
             DButton {
                 text: "移除"
-                onClicked: {
-                    root.saved = root.saved.filter(item => item.device_id !== modelData.device_id);
-                    root.saveValue("devices", root.saved);
-                    if (root.selected === modelData.device_id) {
-                        root.selected = root.saved.length ? root.saved[0].device_id : "";
-                        root.saveValue("selectedDeviceId", root.selected);
-                    }
-                }
+                onClicked: root.removeDevice(modelData.device_id)
             }
         }
     }
