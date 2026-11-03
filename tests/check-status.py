@@ -29,6 +29,10 @@ ShellRoot {
         ok = ok && mouse.status !== null && mouse.status.battery_percent === 65 && mouse.message === "probe failed";
         mouse.receive(JSON.stringify({id: "status", result: {device_id: "test", battery_percent: 64}}));
         ok = ok && mouse.status.battery_percent === 64 && mouse.message === "";
+        restored.selectedDeviceId = "another-device";
+        ok = ok && restored.status === null;
+        restored.receive(JSON.stringify({id: "status", result: {device_id: "test", battery_percent: 90}}));
+        ok = ok && restored.status === null;
         console.warn(ok ? "STATUS_PASS" : "STATUS_FAIL");
         Qt.quit();
     } }

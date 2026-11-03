@@ -4,6 +4,13 @@ import Quickshell.Io
 Item {
     id: root
     property string backendPath: Qt.resolvedUrl("../backend/target/debug/dms-openmouse").toString().replace(/^file:\/\//, "")
+    property string selectedDeviceId: ""
+    onSelectedDeviceIdChanged: {
+        status = null;
+        lastSuccess = "";
+        restore();
+        refresh();
+    }
     property var stateStore: null
     property string stateId: "openMouse"
     onStateStoreChanged: restore()
@@ -12,7 +19,7 @@ Item {
         if (!stateStore || status)
             return;
         const cached = stateStore.loadPluginState(stateId, "lastReading", null);
-        if (!cached || !cached.status || typeof cached.status.battery_percent !== "number" || typeof cached.time !== "string")
+        if (!cached || !cached.status || (selectedDeviceId && cached.status.device_id !== selectedDeviceId) || typeof cached.status.battery_percent !== "number" || typeof cached.time !== "string")
             return;
         status = cached.status;
         lastSuccess = cached.time;
@@ -46,8 +53,16 @@ Item {
                 fail("未发现设备");
                 return;
             }
-            backend.write(JSON.stringify({id: "status", method: "get_status", device_id: reply.result[0].device_id}) + "\n");
+            const device = selectedDeviceId ? reply.result.find(item => item.device_id === selectedDeviceId) : reply.result[0];
+            if (!device) { fail("所选设备未连接"); return; }
+            backend.write(JSON.stringify({id: "status", method: "get_status", device_id: device.device_id}) + "\n");
         } else if (reply.id === "status") {
+            if (selectedDeviceId && reply.result.device_id !== selectedDeviceId) {
+                busy = false;
+                watchdog.stop();
+                Qt.callLater(refresh);
+                return;
+            }
             status = reply.result;
             lastSuccess = Qt.formatDateTime(new Date(), "yyyy-MM-dd hh:mm:ss");
             if (stateStore)

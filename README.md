@@ -67,6 +67,7 @@ openMouse/
   plugin.json
   Main.qml
   MouseService.qml
+  Settings.qml
   bin/
     dms-openmouse
     native-hid/       # 完整 helper，包含 node_modules
@@ -119,3 +120,5 @@ helper 和其 JS/npm 依赖由发布流程准备并放在插件自己的 `bin/na
 ```sh
 python3 tests/check-startup.py
 ```
+
+设置页可扫描当前连接的设备，添加并选择面板使用的设备，也可移除已保存项。该功能保存设备选择，不执行蓝牙配对；未配置选择时继续使用首个识别设备。

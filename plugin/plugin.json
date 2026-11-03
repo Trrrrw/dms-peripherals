@@ -15,6 +15,9 @@
         "node"
     ],
     "permissions": [
-        "process"
-    ]
+        "process",
+        "settings_read",
+        "settings_write"
+    ],
+    "settings": "./Settings.qml"
 }

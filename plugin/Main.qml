@@ -8,6 +8,7 @@ PluginComponent {
     MouseService {
         id: mouse
         stateStore: root.pluginService
+        selectedDeviceId: root.pluginData.selectedDeviceId || ""
         backendPath: root.pluginService ? root.pluginService.getPluginPath(root.pluginId) + "/bin/dms-openmouse" : ""
     }
     readonly property string batteryText: mouse.status ? mouse.status.battery_percent + "%" : "—"
