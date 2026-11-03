@@ -48,11 +48,13 @@ PluginComponent {
             }
         }
     }
-    popoutWidth: 360
+    popoutWidth: 400
     popoutHeight: Math.max(240, detailsHeight + 60)
     property real detailsHeight: 180
     popoutContent: Component {
         PopoutComponent {
+            id: details
+            property bool showError: false
             headerText: mouse.status?.reported_name || "OpenMouse"
             headerActions: Component {
                 DButton {
@@ -72,13 +74,30 @@ PluginComponent {
                     wrapMode: Text.Wrap
                     text: mouse.status ? root.batteryText + (mouse.status.charging ? " · 正在充电" : "") : "暂无设备数据"
                     color: root.statusColor
+                    font.pixelSize: mouse.status ? 32 : Theme.fontSizeMedium
                 }
                 StyledText {
                     width: parent.width
                     visible: mouse.message.length > 0
                     wrapMode: Text.Wrap
-                    text: (mouse.status ? "刷新失败，显示上次成功数据（" + mouse.lastSuccess + "）\n" : "读取失败\n") + mouse.message
-                    color: Theme.error
+                    text: mouse.status ? "刷新失败 · 上次更新 " + mouse.lastSuccess : (mouse.selectedDeviceId ? "暂时无法读取设备，请重试" : "请在设置中添加设备")
+                    color: Theme.surfaceVariantText
+                    Accessible.role: Accessible.StaticText
+                }
+                DButton {
+                    visible: mouse.message.length > 0 && mouse.selectedDeviceId.length > 0
+                    text: details.showError ? "收起错误详情" : "查看错误详情"
+                    backgroundColor: "transparent"
+                    textColor: Theme.primary
+                    onClicked: details.showError = !details.showError
+                }
+                StyledText {
+                    width: parent.width
+                    visible: details.showError && mouse.message.length > 0
+                    text: mouse.message
+                    wrapMode: Text.Wrap
+                    color: Theme.surfaceVariantText
+                    font.pixelSize: Theme.fontSizeSmall
                 }
                 StyledText {
                     visible: !!mouse.status

@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
 import qs.Common
@@ -44,19 +45,39 @@ PluginSettings {
         select(device);
     }
 
-    StyledText { text: "已添加设备"; color: Theme.surfaceText }
+    StyledText {
+        text: "已添加设备"
+        font.pixelSize: Theme.fontSizeLarge
+        color: Theme.surfaceText
+    }
+    StyledText {
+        visible: root.saved.length === 0
+        text: "尚未添加设备，扫描后选择要显示的鼠标"
+        color: Theme.surfaceVariantText
+    }
     Repeater {
         model: root.saved
-        delegate: Row {
+        delegate: Rectangle {
             required property var modelData
-            spacing: Theme.spacingS
-            DButton {
-                text: (root.selected === modelData.device_id ? "✓ " : "") + modelData.name
-                onClicked: root.select(modelData)
-            }
-            DButton {
-                text: "移除"
-                onClicked: root.removeDevice(modelData.device_id)
+            width: parent.width
+            implicitHeight: savedRow.implicitHeight + Theme.spacingM * 2
+            radius: Theme.cornerRadius
+            color: Theme.surfaceContainer
+            border.width: root.selected === modelData.device_id ? 1 : 0
+            border.color: Theme.primary
+            RowLayout {
+                id: savedRow
+                anchors.fill: parent
+                anchors.margins: Theme.spacingM
+                spacing: Theme.spacingM
+                DIcon { name: "mouse"; size: 24; color: Theme.primary }
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    StyledText { Layout.fillWidth: true; text: modelData.name; elide: Text.ElideRight; color: Theme.surfaceText }
+                    StyledText { text: root.selected === modelData.device_id ? "面板显示中" : "已添加"; color: Theme.surfaceVariantText; font.pixelSize: Theme.fontSizeSmall }
+                }
+                DButton { text: "使用"; visible: root.selected !== modelData.device_id; onClicked: root.select(modelData) }
+                DButton { iconName: "delete"; tooltipText: "移除设备"; minimumWidth: 36; horizontalPadding: Theme.spacingS; backgroundColor: "transparent"; textColor: Theme.surfaceVariantText; onClicked: root.removeDevice(modelData.device_id) }
             }
         }
     }
@@ -103,12 +124,31 @@ PluginSettings {
         color: Theme.surfaceVariantText
     }
     Repeater {
-        model: root.discovered
-        delegate: DButton {
+        model: root.discovered.filter(item => !root.saved.some(saved => saved.device_id === item.device_id))
+        delegate: Rectangle {
             required property var modelData
-            text: "添加 " + modelData.name + (modelData.permission_required ? " · 需要授权" : "") + (modelData.supported === false ? " · 未支持" : "")
-            enabled: !root.saved.some(item => item.device_id === modelData.device_id)
-            onClicked: root.add(modelData)
+            width: parent.width
+            implicitHeight: candidateRow.implicitHeight + Theme.spacingM * 2
+            radius: Theme.cornerRadius
+            color: Theme.surfaceContainer
+            RowLayout {
+                id: candidateRow
+                anchors.fill: parent
+                anchors.margins: Theme.spacingM
+                spacing: Theme.spacingM
+                DIcon { name: modelData.supported ? "mouse" : "usb"; size: 24; color: Theme.surfaceVariantText }
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    StyledText { Layout.fillWidth: true; text: modelData.name; elide: Text.ElideRight; color: Theme.surfaceText }
+                    StyledText {
+                        Layout.fillWidth: true
+                        text: modelData.vendor_id + ":" + modelData.product_id + " · " + (modelData.supported ? (modelData.permission_required ? "需要授权" : "可连接") : "暂不支持")
+                        color: Theme.surfaceVariantText
+                        font.pixelSize: Theme.fontSizeSmall
+                    }
+                }
+                DButton { text: "添加"; iconName: "add"; onClicked: root.add(modelData) }
+            }
         }
     }
     Process {
@@ -126,7 +166,7 @@ PluginSettings {
                     const reply = JSON.parse(text);
                     if (reply.error) throw new Error(reply.error.message);
                     root.discovered = reply.result;
-                    root.scanMessage = reply.result.length ? "点击添加设备，添加后将用于面板显示" : "未发现支持的设备，请检查连接";
+                    root.scanMessage = reply.result.length ? "选择要添加的设备" : "未发现 USB HID 设备，请检查连接";
                 } catch (error) { root.scanMessage = "扫描失败：" + error.message; }
             }
         }
