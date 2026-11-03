@@ -46,12 +46,18 @@ Column {
         ColumnLayout {
             Layout.fillWidth: true
             StyledText { Layout.fillWidth: true; text: root.deviceState.name || root.device?.name || "设备"; elide: Text.ElideRight; font.pixelSize: Theme.fontSizeLarge; color: Theme.surfaceText }
-            StyledText { text: root.deviceState.connectionDetail || (root.reader?.status ? "已有设备读数" : "等待设备响应"); color: Theme.surfaceVariantText }
+            StyledText {
+                Layout.fillWidth: true
+                text: root.reader?.operationMessage || root.deviceState.connectionDetail || (root.reader?.status ? "已有设备读数" : "等待设备响应")
+                elide: Text.ElideRight
+                maximumLineCount: 1
+                color: root.reader?.busy ? Theme.primary : Theme.surfaceVariantText
+                Accessible.role: Accessible.StaticText
+            }
         }
         DButton { text: root.reader?.busy ? "读取中…" : "刷新"; iconName: "refresh"; enabled: !!root.reader && !root.reader.busy; onClicked: root.reader.readDetails() }
     }
     DButtonGroup { model: root.tabs; currentIndex: root.tabs.indexOf(root.tab); onSelectionChanged: (index, selected) => { if (selected) root.tab = root.tabs[index]; } }
-    StyledText { width: parent.width; visible: !!root.reader?.operationMessage; text: root.reader?.operationMessage || ""; wrapMode: Text.Wrap; color: Theme.primary; Accessible.role: Accessible.StaticText }
     Column {
         width: parent.width
         visible: !!root.reader?.message
