@@ -36,6 +36,8 @@ ShellRoot {
         ok = ok && restored.status === null;
         restored.receive(JSON.stringify({id: "status", result: {device_id: "test", battery_percent: 90}}));
         ok = ok && restored.status === null;
+        restored.receive(JSON.stringify({id:"get_details", result:{status:{name:"Mouse",batteryPercent:55,batteryState:"Discharging",dpi:2400,pollingRateHz:1000},capabilities:{dpi:true},options:{dpi:[400,800,2400]}}}));
+        ok = ok && restored.details.capabilities.dpi && restored.status.battery_percent === 55 && restored.status.dpi === 2400;
         console.warn(ok ? "STATUS_PASS" : "STATUS_FAIL");
         Qt.quit();
     } }

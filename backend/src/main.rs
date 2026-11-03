@@ -19,6 +19,7 @@ fn respond(line: &str) -> Value {
     }
     match request.get("method").and_then(Value::as_str) {
         Some("list_devices") => list_devices(id),
+        Some("get_details" | "set_setting") => device_control(id, &request),
         Some("get_status") => match request
             .get("device_id")
             .and_then(Value::as_str)
@@ -30,6 +31,60 @@ fn respond(line: &str) -> Value {
         Some(_) => error(id, "unknown_method", "Unknown method"),
         None => error(id, "invalid_request", "method is required"),
     }
+}
+
+#[cfg(feature = "hardware")]
+fn device_control(id: Value, request: &Value) -> Value {
+    use std::process::{Command, Stdio};
+    let Some(device_id) = request
+        .get("device_id")
+        .and_then(Value::as_str)
+        .filter(|s| !s.is_empty())
+    else {
+        return error(id, "invalid_request", "device_id is required");
+    };
+    if !openmouse_bridge::drivers::detect_mice()
+        .iter()
+        .any(|device| device.device_id == device_id)
+    {
+        return error(
+            id,
+            "unsupported",
+            "Device not connected or not supported by Bridge",
+        );
+    }
+    let result = (|| -> io::Result<Value> {
+        let executable = std::env::current_exe()?;
+        let helper = executable
+            .parent()
+            .unwrap()
+            .join("native-hid/src/control.mjs");
+        let mut child = Command::new("node")
+            .arg(helper)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()?;
+        let mut input = child.stdin.take().unwrap();
+        serde_json::to_writer(&mut input, request)?;
+        drop(input);
+        let output = child.wait_with_output()?;
+        if !output.status.success() {
+            return Err(io::Error::other(
+                String::from_utf8_lossy(&output.stderr).to_string(),
+            ));
+        }
+        Ok(serde_json::from_slice(&output.stdout)?)
+    })();
+    match result {
+        Ok(result) => json!({"id": id, "result": result}),
+        Err(err) => error(id, "device_operation_failed", &err.to_string()),
+    }
+}
+
+#[cfg(not(feature = "hardware"))]
+fn device_control(id: Value, _: &Value) -> Value {
+    list_devices(id)
 }
 
 #[cfg(all(feature = "hardware", target_os = "linux"))]

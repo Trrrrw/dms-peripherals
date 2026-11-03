@@ -1,6 +1,6 @@
 # DMS OpenMouse
 
-基于 [OpenMouse](https://github.com/OpenMouse-Project/openmouse) 的 DankMaterialShell（DMS）外设状态与控制插件，目前已实现只读后端，正在接入 DMS 界面。
+基于 [OpenMouse](https://github.com/OpenMouse-Project/openmouse) 的 DankMaterialShell（DMS）外设状态与控制插件，已实现设备状态显示和分类设置弹窗。
 
 - 使用 QML 编写 DMS 界面
 - 使用 Rust 编写独立后端，直接依赖 OpenMouse Bridge crate，复用其设备控制能力
@@ -10,7 +10,7 @@
 
 ## 当前进度
 
-已添加只读 Rust 后端，支持 `list_devices` 和 `get_status`，已添加 DMS 面板电量及状态弹窗，暂未实现设备设置写入。
+已添加 Rust 后端及 DMS 面板电量和设备分类弹窗，支持状态读取以及按设备能力提供的设置写入和回读验证。
 Bridge 固定到 `30a3290ef88200f83a8083a88a3143d5e12eeaa8`，直接调用公开的 `drivers` API，不启动 Bridge HTTP 服务或托盘。
 
 ## 构建与验证
@@ -128,3 +128,25 @@ Linux 扫描仅显示匹配 OpenMouse 协议库 HID 支持过滤表的 USB 设�
 `backend/data/hid-filters.json` 来自当前锁定 helper 中鼠标和键盘协议库的 `SUPPORTED_HID_FILTERS` 合集；升级协议库时同步重新生成。过滤匹配表示可作为协议候选，实际读取仍受 Bridge 已实现的驱动能力限制。
 
 已添加设备使用眼睛按钮独立控制状态栏显示，可同时显示多台设备。点击设备图标可切换鼠标／键盘图标；图标仅影响显示，不改变协议驱动。读数按设备分别缓存。同品牌多设备的读取仍受 Bridge 限制，无法可靠定向时会返回错误。
+
+## 设备控制弹窗
+
+状态栏点击某台设备会定位到该设备；弹窗顶部也可切换已添加设备。
+提供概览、性能、按键（设备提供防抖字段时）、高级分类，控件按实际读取的字段、
+驱动方法和 UI 能力提示启用。支持 DPI、DPI 档位选择及编辑、回报率、LOD、
+运动同步、直线修正、Ripple control、防抖和休眠。每次只发送一项设置，写入后
+重新读取，读数与目标不一致时报告失败，不把发送成功当作设备设置生效。
+角度微调当前只读；固件仅显示版本，不提供刷写或更新检查。
+电量历史保存在 DMS 插件状态中，最多记录最近七天，每五分钟采一个成功读数。
+
+`get_details` 和 `set_setting` 通过新增的 helper 调用已锁定上游驱动。
+构建部署时，须额外将 `backend/helper/*.mjs` 复制到后端旁的 `native-hid/src/`：
+
+```sh
+cp backend/helper/*.mjs plugin/bin/native-hid/src/
+node --test tests/control.test.mjs
+```
+
+这两个 helper 文件是项目源码，不能只更新 Rust 二进制而遗漏它们。
+
+DPI 档位提供固定宽度的选择按钮、按设备支持值步进的滑块和精确输入。拖动仅预览，松开时写入并回读。
