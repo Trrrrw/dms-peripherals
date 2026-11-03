@@ -53,6 +53,14 @@ PluginComponent {
     popoutContent: Component {
         PopoutComponent {
             headerText: mouse.status?.reported_name || "OpenMouse"
+            headerActions: Component {
+                DButton {
+                    text: mouse.busy ? "刷新中…" : "刷新"
+                    iconName: "refresh"
+                    enabled: !mouse.busy
+                    onClicked: mouse.refresh()
+                }
+            }
             onImplicitHeightChanged: root.detailsHeight = implicitHeight
             Component.onCompleted: root.detailsHeight = implicitHeight
             Column {
