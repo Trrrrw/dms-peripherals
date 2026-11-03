@@ -19,7 +19,7 @@ Item {
     function restore() {
         if (!stateStore || status || !selectedDeviceId)
             return;
-        const cached = stateStore.loadPluginState(stateId, "lastReading", null);
+        const cached = stateStore.loadPluginState(stateId, "reading:" + selectedDeviceId, stateStore.loadPluginState(stateId, "lastReading", null));
         if (!cached || !cached.status || (selectedDeviceId && cached.status.device_id !== selectedDeviceId) || typeof cached.status.battery_percent !== "number" || typeof cached.time !== "string")
             return;
         status = cached.status;
@@ -72,7 +72,7 @@ Item {
             status = reply.result;
             lastSuccess = Qt.formatDateTime(new Date(), "yyyy-MM-dd hh:mm:ss");
             if (stateStore)
-                stateStore.savePluginState(stateId, "lastReading", {status: status, time: lastSuccess});
+                stateStore.savePluginState(stateId, "reading:" + selectedDeviceId, {status: status, time: lastSuccess});
             message = "";
             busy = false;
             watchdog.stop();

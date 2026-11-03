@@ -41,6 +41,12 @@ PluginSettings {
         selected = device.device_id;
         saveValue("selectedDeviceId", selected);
     }
+    function updateDevice(deviceId, values) {
+        const updated = saved.map(item => item.device_id === deviceId ? Object.assign({}, item, values) : item);
+        saveValue("devices", updated);
+        saved = updated;
+    }
+
     function removeDevice(deviceId) {
         const remaining = saved.filter(item => item.device_id !== deviceId);
         if (selected === deviceId) {
@@ -54,7 +60,7 @@ PluginSettings {
 
     function add(device) {
         if (!saved.some(item => item.device_id === device.device_id)) {
-            saved = saved.concat([device]);
+            saved = saved.concat([Object.assign({}, device, {showInBar: true, icon: "mouse"})]);
             saveValue("devices", saved);
         }
         select(device);
@@ -85,13 +91,29 @@ PluginSettings {
                 anchors.fill: parent
                 anchors.margins: Theme.spacingM
                 spacing: Theme.spacingM
-                DIcon { name: "mouse"; size: 24; color: Theme.primary }
+                DButton {
+                    iconName: modelData.icon || "mouse"
+                    tooltipText: "切换鼠标／键盘图标"
+                    minimumWidth: 36
+                    horizontalPadding: Theme.spacingS
+                    backgroundColor: "transparent"
+                    onClicked: root.updateDevice(modelData.device_id, {icon: modelData.icon === "keyboard" ? "mouse" : "keyboard"})
+                }
                 ColumnLayout {
                     Layout.fillWidth: true
                     StyledText { Layout.fillWidth: true; text: modelData.name; elide: Text.ElideRight; color: Theme.surfaceText }
-                    StyledText { text: root.selected === modelData.device_id ? "面板显示中" : "已添加"; color: Theme.surfaceVariantText; font.pixelSize: Theme.fontSizeSmall }
+                    StyledText { text: modelData.showInBar !== false ? "在状态栏显示" : "已隐藏"; color: Theme.surfaceVariantText; font.pixelSize: Theme.fontSizeSmall }
                 }
-                DButton { text: "使用"; visible: root.selected !== modelData.device_id; onClicked: root.select(modelData) }
+                DButton {
+                    iconName: modelData.showInBar !== false ? "visibility" : "visibility_off"
+                    tooltipText: modelData.showInBar !== false ? "从状态栏隐藏" : "在状态栏显示"
+                    minimumWidth: 36
+                    horizontalPadding: Theme.spacingS
+                    backgroundColor: "transparent"
+                    textColor: modelData.showInBar !== false ? Theme.primary : Theme.surfaceVariantText
+                    onClicked: root.updateDevice(modelData.device_id, {showInBar: modelData.showInBar === false})
+                }
+                DButton { iconName: "admin_panel_settings"; tooltipText: "检查设备权限"; minimumWidth: 36; horizontalPadding: Theme.spacingS; backgroundColor: "transparent"; onClicked: root.select(modelData) }
                 DButton { iconName: "delete"; tooltipText: "移除设备"; minimumWidth: 36; horizontalPadding: Theme.spacingS; backgroundColor: "transparent"; textColor: Theme.surfaceVariantText; onClicked: root.removeDevice(modelData.device_id) }
             }
         }
@@ -213,7 +235,7 @@ PluginSettings {
                     if (root.selected) {
                         root.permissionFeedback = !current ? "未检测到所选设备，请确认已重新插入" : current.permission_required ? "仍缺少访问权限，请执行命令并拔插设备后重试" : "访问权限正常";
                     }
-                    const updated = root.saved.map(item => reply.result.find(device => device.device_id === item.device_id) || item);
+                    const updated = root.saved.map(item => Object.assign({}, item, reply.result.find(device => device.device_id === item.device_id) || {}));
                     root.saveValue("devices", updated);
                     root.saved = updated;
                     root.scanMessage = reply.result.length ? "选择要添加的设备" : "未发现 USB HID 设备，请检查连接";

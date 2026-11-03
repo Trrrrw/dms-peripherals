@@ -13,9 +13,9 @@ import Quickshell
 ShellRoot {
     QtObject {
         id: store
-        property var value: null
-        function savePluginState(id, key, data) { value = data; }
-        function loadPluginState(id, key, fallback) { return value || fallback; }
+        property var values: ({})
+        function savePluginState(id, key, data) { values[key] = data; }
+        function loadPluginState(id, key, fallback) { return values[key] || fallback; }
     }
     MouseService { id: mouse; backendPath: ""; selectedDeviceId: "test"; stateStore: store }
     MouseService { id: restored; backendPath: ""; selectedDeviceId: "test"; stateStore: store }
