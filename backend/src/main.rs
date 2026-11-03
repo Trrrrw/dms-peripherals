@@ -48,8 +48,30 @@ fn usb_ids(uevent: &str) -> Option<(u16, u16)> {
 }
 
 #[cfg(all(feature = "hardware", target_os = "linux"))]
+fn matches_filter(filter: &Value, vid: u16, pid: u16, page: u16, usage: u16) -> bool {
+    [
+        ("vendorId", vid),
+        ("productId", pid),
+        ("usagePage", page),
+        ("usage", usage),
+    ]
+    .into_iter()
+    .all(|(key, value)| {
+        filter
+            .get(key)
+            .is_none_or(|expected| expected.as_u64() == Some(u64::from(value)))
+    })
+}
+
+#[cfg(all(feature = "hardware", target_os = "linux"))]
 fn list_devices(id: Value) -> Value {
     let supported = openmouse_bridge::drivers::detect_mice();
+    let api = match hidapi::HidApi::new() {
+        Ok(api) => api,
+        Err(err) => return error(id, "enumeration_failed", &err.to_string()),
+    };
+    let filters: Vec<Value> = serde_json::from_str(include_str!("../data/hid-filters.json"))
+        .expect("embedded HID filters");
     let entries = match std::fs::read_dir("/sys/class/hidraw") {
         Ok(entries) => entries,
         Err(err) => return error(id, "enumeration_failed", &err.to_string()),
@@ -75,6 +97,23 @@ fn list_devices(id: Value) -> Value {
         } else {
             serial.to_owned()
         };
+        let visible = api.device_list().any(|device| {
+            device.vendor_id() == vid
+                && device.product_id() == pid
+                && device.serial_number().unwrap_or_default() == serial
+                && filters.iter().any(|filter| {
+                    matches_filter(
+                        filter,
+                        device.vendor_id(),
+                        device.product_id(),
+                        device.usage_page(),
+                        device.usage(),
+                    )
+                })
+        });
+        if !visible {
+            continue;
+        }
         let matched = supported.iter().find(|device| {
             device
                 .device_id
@@ -101,8 +140,10 @@ fn list_devices(id: Value) -> Value {
             }
             continue;
         }
-        devices.push(json!({"device_id": device_id, "name": name, "vendor_id": format!("{vid:04x}"),
-            "product_id": format!("{pid:04x}"), "supported": matched.is_some(), "permission_required": denied}));
+        devices.push(
+            json!({"device_id": device_id, "name": name, "vendor_id": format!("{vid:04x}"),
+            "product_id": format!("{pid:04x}"), "supported": true, "permission_required": denied}),
+        );
     }
     devices.sort_by(|a, b| a["device_id"].as_str().cmp(&b["device_id"].as_str()));
     json!({"id": id, "result": devices})
@@ -177,6 +218,13 @@ fn main() -> io::Result<()> {
 
 #[cfg(all(test, feature = "hardware", target_os = "linux"))]
 mod tests {
+    #[test]
+    fn filters_use_protocol_identity_and_usage_not_permissions() {
+        let filter = serde_json::json!({"vendorId": 0x373b, "usagePage": 0xff02, "usage": 2});
+        assert!(super::matches_filter(&filter, 0x373b, 0x1085, 0xff02, 2));
+        assert!(!super::matches_filter(&filter, 0x3837, 0x3033, 0xff02, 2));
+        assert!(!super::matches_filter(&filter, 0x373b, 0x1085, 1, 2));
+    }
     #[test]
     fn parses_usb_ids_without_requiring_device_access() {
         assert_eq!(

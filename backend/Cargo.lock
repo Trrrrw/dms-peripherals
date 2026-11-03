@@ -955,6 +955,7 @@ dependencies = [
 name = "dms-openmouse"
 version = "0.1.0"
 dependencies = [
+ "hidapi",
  "openmouse-bridge",
  "serde_json",
 ]

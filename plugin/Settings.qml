@@ -129,9 +129,17 @@ PluginSettings {
     StyledText {
         width: parent.width
         visible: root.selectedDevice?.permission_required === true
-        text: "此设备缺少访问权限。复制并运行以下命令，然后拔插设备并重新扫描。规则仅授权此 VID/PID。"
+        text: "此设备缺少访问权限。复制并运行以下命令。规则仅授权此 VID/PID。"
         wrapMode: Text.Wrap
         color: Theme.surfaceVariantText
+    }
+    StyledText {
+        width: parent.width
+        visible: root.selectedDevice?.permission_required === true
+        text: "运行命令后，必须拔掉并重新插入设备或接收器，再点击“重新检测”"
+        font.weight: Font.DemiBold
+        color: Theme.error
+        wrapMode: Text.Wrap
     }
     TextEdit {
         width: parent.width
