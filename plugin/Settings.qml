@@ -97,6 +97,7 @@ PluginSettings {
                     minimumWidth: 36
                     horizontalPadding: Theme.spacingS
                     backgroundColor: "transparent"
+                    textColor: Theme.surfaceText
                     onClicked: root.updateDevice(modelData.device_id, {icon: modelData.icon === "keyboard" ? "mouse" : "keyboard"})
                 }
                 ColumnLayout {
@@ -113,7 +114,7 @@ PluginSettings {
                     textColor: modelData.showInBar !== false ? Theme.primary : Theme.surfaceVariantText
                     onClicked: root.updateDevice(modelData.device_id, {showInBar: modelData.showInBar === false})
                 }
-                DButton { iconName: "admin_panel_settings"; tooltipText: "检查设备权限"; minimumWidth: 36; horizontalPadding: Theme.spacingS; backgroundColor: "transparent"; onClicked: root.select(modelData) }
+                DButton { iconName: "admin_panel_settings"; tooltipText: "检查设备权限"; minimumWidth: 36; horizontalPadding: Theme.spacingS; backgroundColor: "transparent"; textColor: Theme.surfaceText; onClicked: root.select(modelData) }
                 DButton { iconName: "delete"; tooltipText: "移除设备"; minimumWidth: 36; horizontalPadding: Theme.spacingS; backgroundColor: "transparent"; textColor: Theme.surfaceVariantText; onClicked: root.removeDevice(modelData.device_id) }
             }
         }
