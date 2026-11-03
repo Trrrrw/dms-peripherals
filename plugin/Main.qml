@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Controls
 import qs.Common
 import qs.DCommon.Widgets
 import qs.Modules.Plugins
@@ -129,14 +128,13 @@ PluginComponent {
                         if (index >= 0) root.openDevice(root.configuredDevices[index].device_id);
                     }
                 }
-                Flickable {
-                    width: parent.width
+                DFlickable {
+                    width: parent.width - Theme.spacingM
                     height: parent.height - selector.height - parent.spacing
                     contentWidth: width
                     contentHeight: panel.implicitHeight
                     clip: true
                     boundsBehavior: Flickable.StopAtBounds
-                    ScrollBar.vertical: ScrollBar { }
                     DevicePanel { id: panel; width: parent.width; device: root.activeDevice; reader: root.activeReader; requestedTab: root.workspaceTab }
                 }
             }
