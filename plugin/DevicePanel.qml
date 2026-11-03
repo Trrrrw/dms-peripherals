@@ -161,11 +161,6 @@ Column {
                     enabled: !!root.caps.activeDpiStage && !root.reader?.busy
                     onClicked: root.write("activeDpiStage", index)
                 }
-                StyledText {
-                    text: String(stageRow.index + 1)
-                    Layout.minimumWidth: implicitWidth
-                    color: Theme.surfaceText
-                }
                 DTextField { id: stageValue; Layout.preferredWidth: 90; text: String(modelData); validator: IntValidator { bottom: 1; top: 100000 } }
                 DSlider {
                     id: stageSlider
