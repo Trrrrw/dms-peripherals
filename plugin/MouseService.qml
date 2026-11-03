@@ -4,6 +4,21 @@ import Quickshell.Io
 Item {
     id: root
     property string backendPath: Qt.resolvedUrl("../backend/target/debug/dms-openmouse").toString().replace(/^file:\/\//, "")
+    property var stateStore: null
+    property string stateId: "openMouse"
+    onStateStoreChanged: restore()
+
+    function restore() {
+        if (!stateStore || status)
+            return;
+        const cached = stateStore.loadPluginState(stateId, "lastReading", null);
+        if (!cached || !cached.status || typeof cached.status.battery_percent !== "number" || typeof cached.time !== "string")
+            return;
+        status = cached.status;
+        lastSuccess = cached.time;
+        message = "正在刷新，当前显示历史数据";
+    }
+
     property var status: null
     property string message: "正在连接"
     property bool busy: false
@@ -34,7 +49,9 @@ Item {
             backend.write(JSON.stringify({id: "status", method: "get_status", device_id: reply.result[0].device_id}) + "\n");
         } else if (reply.id === "status") {
             status = reply.result;
-            lastSuccess = Qt.formatDateTime(new Date(), "MM-dd hh:mm:ss");
+            lastSuccess = Qt.formatDateTime(new Date(), "yyyy-MM-dd hh:mm:ss");
+            if (stateStore)
+                stateStore.savePluginState(stateId, "lastReading", {status: status, time: lastSuccess});
             message = "";
             busy = false;
             watchdog.stop();

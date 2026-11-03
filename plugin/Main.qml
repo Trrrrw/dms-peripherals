@@ -7,6 +7,7 @@ PluginComponent {
     id: root
     MouseService {
         id: mouse
+        stateStore: root.pluginService
         backendPath: root.pluginService ? root.pluginService.getPluginPath(root.pluginId) + "/bin/dms-openmouse" : ""
     }
     readonly property string batteryText: mouse.status ? mouse.status.battery_percent + "%" : "—"
@@ -47,10 +48,13 @@ PluginComponent {
         }
     }
     popoutWidth: 360
-    popoutHeight: mouse.message ? 360 : 240
+    popoutHeight: Math.max(240, detailsHeight + 60)
+    property real detailsHeight: 180
     popoutContent: Component {
         PopoutComponent {
             headerText: mouse.status?.reported_name || "OpenMouse"
+            onImplicitHeightChanged: root.detailsHeight = implicitHeight
+            Component.onCompleted: root.detailsHeight = implicitHeight
             Column {
                 width: parent.width
                 spacing: Theme.spacingM
@@ -64,8 +68,6 @@ PluginComponent {
                     width: parent.width
                     visible: mouse.message.length > 0
                     wrapMode: Text.Wrap
-                    maximumLineCount: 5
-                    elide: Text.ElideRight
                     text: (mouse.status ? "刷新失败，显示上次成功数据（" + mouse.lastSuccess + "）\n" : "读取失败\n") + mouse.message
                     color: Theme.error
                 }

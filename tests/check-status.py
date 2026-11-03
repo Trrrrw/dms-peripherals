@@ -11,11 +11,20 @@ with tempfile.TemporaryDirectory(prefix='openmouse-status-') as directory:
     (root / 'shell.qml').write_text('''import QtQuick
 import Quickshell
 ShellRoot {
-    MouseService { id: mouse; backendPath: "" }
+    QtObject {
+        id: store
+        property var value: null
+        function savePluginState(id, key, data) { value = data; }
+        function loadPluginState(id, key, fallback) { return value || fallback; }
+    }
+    MouseService { id: mouse; backendPath: ""; stateStore: store }
+    MouseService { id: restored; backendPath: ""; stateStore: store }
     Timer { interval: 10; running: true; onTriggered: {
         mouse.fail("initial failure");
         let ok = mouse.status === null;
         mouse.receive(JSON.stringify({id: "status", result: {device_id: "test", battery_percent: 65}}));
+        restored.restore();
+        ok = ok && restored.status !== null && restored.status.battery_percent === 65 && restored.lastSuccess !== "" && restored.message.length > 0;
         mouse.fail("probe failed");
         ok = ok && mouse.status !== null && mouse.status.battery_percent === 65 && mouse.message === "probe failed";
         mouse.receive(JSON.stringify({id: "status", result: {device_id: "test", battery_percent: 64}}));
