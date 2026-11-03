@@ -150,12 +150,21 @@ Column {
                 required property var modelData
                 width: parent.width
                 DButton {
-                    text: "档位 " + (index + 1)
                     iconName: root.deviceState.activeDpiStage === index ? "radio_button_checked" : "radio_button_unchecked"
-                    minimumWidth: 100
-                    maximumWidth: 100
+                    tooltipText: "选择档位 " + (stageRow.index + 1)
+                    Layout.minimumWidth: 36
+                    Layout.preferredWidth: 36
+                    Layout.maximumWidth: 36
+                    minimumWidth: 36
+                    maximumWidth: 36
+                    horizontalPadding: Theme.spacingXS
                     enabled: !!root.caps.activeDpiStage && !root.reader?.busy
                     onClicked: root.write("activeDpiStage", index)
+                }
+                StyledText {
+                    text: String(stageRow.index + 1)
+                    Layout.minimumWidth: implicitWidth
+                    color: Theme.surfaceText
                 }
                 DTextField { id: stageValue; Layout.preferredWidth: 90; text: String(modelData); validator: IntValidator { bottom: 1; top: 100000 } }
                 DSlider {
