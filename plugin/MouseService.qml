@@ -111,21 +111,13 @@ Item {
         if (reply.error) {
             operationMessage = "";
             fail(reply.error.message);
-        } else if (reply.id === "devices") {
-            if (!reply.result.length) {
-                fail("未发现设备");
-                return;
-            }
-            const device = reply.result.find(item => item.device_id === selectedDeviceId);
-            if (!device) { fail("所选设备未连接"); return; }
-            backend.write(JSON.stringify({id: "status", method: "get_status", device_id: device.device_id}) + "\n");
         } else if (reply.id === "get_details" || reply.id === "set_setting") {
             details = reply.result;
             const value = details.status;
             status = {device_id: selectedDeviceId, reported_name: value.name, battery_percent: value.batteryPercent,
                 charging: value.batteryState === "Charging", dpi: value.dpi, polling_rate_hz: value.pollingRateHz};
             acquiredAt = Date.now();
-            lastSuccess = Qt.formatDateTime(new Date(acquiredAt), "yyyy-MM-dd hh:mm:ss");
+            lastSuccess = Qt.formatDateTime(new Date(acquiredAt), "yyyy-MM-dd HH:mm:ss");
             if (stateStore) stateStore.savePluginState(stateId, "reading:" + selectedDeviceId, {status: status, time: lastSuccess, acquiredAt: acquiredAt, details: details});
             recordHistory();
             message = "";
@@ -142,7 +134,7 @@ Item {
             }
             status = reply.result;
             acquiredAt = Date.now();
-            lastSuccess = Qt.formatDateTime(new Date(acquiredAt), "yyyy-MM-dd hh:mm:ss");
+            lastSuccess = Qt.formatDateTime(new Date(acquiredAt), "yyyy-MM-dd HH:mm:ss");
             if (stateStore)
                 stateStore.savePluginState(stateId, "reading:" + selectedDeviceId, {status: status, time: lastSuccess, acquiredAt: acquiredAt, details: details});
             recordHistory();

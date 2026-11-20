@@ -1,8 +1,8 @@
 {
-  "name": "openmouse-bridge-native-hid",
+  "name": "dms-peripherals-native-hid",
   "version": "0.1.0",
   "private": true,
-  "description": "Node.js helper Bridge spawns to push saved profile DPI/polling-rate settings to a mouse over native HID, reusing OpenMouse's own hardware-verified WebHID driver classes from @openmouse/protocol instead of reimplementing per-vendor protocols.",
+  "description": "Node.js native HID runtime for the DMS Peripherals plugin, powered by @openmouse/protocol and @openmouse/keyboard-protocol.",
   "type": "module",
   "scripts": {
     "test": "node --test \"src/**/*.test.mjs\""

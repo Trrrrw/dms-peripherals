@@ -8,7 +8,8 @@ for key in ('component', 'settings', 'startupCheck'):
     assert (root / manifest[key]).is_file(), key
 for name in ('ControlCard.qml','DevicePanel.qml','MouseService.qml','bin/dms-peripherals',
              'bin/native-hid/src/control.mjs','bin/native-hid/src/runtime.mjs',
-             'bin/native-hid/src/hid-device-adapter.mjs','licenses/LICENSE'):
+             'bin/native-hid/src/hid-device-adapter.mjs','licenses/LICENSE',
+             'licenses/THIRD_PARTY_NOTICES.md','licenses/BRIDGE_LICENSE.txt','licenses/SOURCE_LINKS.md'):
     assert (root / name).is_file(), name
 assert not (root / 'bin/native-hid/node/bin/node').exists(), 'Do not bundle Node.js'
 result=subprocess.run([str(root / 'bin/dms-peripherals')],input='{"id":1,"method":"unknown"}\n',capture_output=True,text=True,check=True)

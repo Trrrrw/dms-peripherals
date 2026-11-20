@@ -26,7 +26,6 @@ PluginComponent {
     onActiveReaderChanged: refreshActiveDevice()
     onInteractionActiveChanged: refreshActiveDevice()
     property var readers: ({})
-    property real detailsHeight: 180
 
     function battery(device) {
         const status = readers[device.device_id]?.status;

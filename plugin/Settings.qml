@@ -60,7 +60,8 @@ PluginSettings {
 
     function add(device) {
         if (!saved.some(item => item.device_id === device.device_id)) {
-            saved = saved.concat([Object.assign({}, device, {showInBar: true, icon: "mouse"})]);
+            const icon = device.kind === "keyboard" ? "keyboard" : "mouse";
+            saved = saved.concat([Object.assign({}, device, {showInBar: true, icon: icon})]);
             saveValue("devices", saved);
         }
         select(device);
@@ -210,7 +211,7 @@ PluginSettings {
                 anchors.fill: parent
                 anchors.margins: Theme.spacingM
                 spacing: Theme.spacingM
-                DIcon { name: modelData.supported ? "mouse" : "usb"; size: 24; color: Theme.surfaceVariantText }
+                DIcon { name: modelData.supported ? (modelData.kind === "keyboard" ? "keyboard" : "mouse") : "usb"; size: 24; color: Theme.surfaceVariantText }
                 ColumnLayout {
                     Layout.fillWidth: true
                     StyledText { Layout.fillWidth: true; text: modelData.name; elide: Text.ElideRight; color: Theme.surfaceText }

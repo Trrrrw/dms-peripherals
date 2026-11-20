@@ -104,9 +104,9 @@ Column {
             width: parent.width
             Repeater {
                 model: [
-                    {label: "灵敏度", value: (root.deviceState.dpi ?? root.reader?.status?.dpi ?? "—") + " DPI"},
-                    {label: "回报率", value: (root.deviceState.pollingRateHz ?? root.reader?.status?.polling_rate_hz ?? "—") + " Hz"},
-                    {label: "电量", value: (root.deviceState.batteryPercent ?? root.reader?.status?.battery_percent ?? "—") + "%"}
+                    {label: "灵敏度", value: (root.deviceState.dpi ?? root.reader?.status?.dpi) != null ? (root.deviceState.dpi ?? root.reader?.status?.dpi) + " DPI" : "—"},
+                    {label: "回报率", value: (root.deviceState.pollingRateHz ?? root.reader?.status?.polling_rate_hz) != null ? (root.deviceState.pollingRateHz ?? root.reader?.status?.polling_rate_hz) + " Hz" : "—"},
+                    {label: "电量", value: (root.deviceState.batteryPercent ?? root.reader?.status?.battery_percent) != null ? (root.deviceState.batteryPercent ?? root.reader?.status?.battery_percent) + "%" : "—"}
                 ]
                 delegate: Column {
                     required property var modelData
@@ -261,7 +261,7 @@ Column {
         visible: root.tab === "性能" && (root.deviceState.motionSync != null || root.deviceState.angleSnapping != null || root.deviceState.rippleControl != null)
         title: "信号处理"
         Repeater {
-            model: [{key:"motionSync",label:"运动同步"},{key:"angleSnapping",label:"直线修正"},{key:"rippleControl",label:"Ripple control"}]
+            model: [{key:"motionSync",label:"运动同步"},{key:"angleSnapping",label:"直线修正"},{key:"rippleControl",label:"波纹控制"}]
             delegate: RowLayout {
                 required property var modelData
                 width: parent.width
