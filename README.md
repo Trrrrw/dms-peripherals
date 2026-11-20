@@ -66,4 +66,4 @@ To update an existing local installation, copy the QML/helper files and atomical
 
 AGPL-3.0-or-later. See [LICENSE](LICENSE) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Dependency license texts are included in the installable plugin.
 
-Developed with AI assistance. The preview is a user-provided screenshot of the plugin, not a new desktop capture.
+Developed with AI assistance.
