@@ -5,7 +5,7 @@ use std::{
 
 #[test]
 fn invalid_requests_do_not_terminate_the_stream() {
-    let mut child = Command::new(env!("CARGO_BIN_EXE_dms-openmouse"))
+    let mut child = Command::new(env!("CARGO_BIN_EXE_dms-peripherals"))
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .spawn()

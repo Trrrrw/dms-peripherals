@@ -1,9 +1,9 @@
-# Device Deck
+# DMS Peripherals
 
 A DMS peripheral-management plugin powered by [OpenMouse](https://github.com/OpenMouse-Project).
 This is an independent, unofficial plugin, not an OpenMouse or DMS release.
 
-![Device Deck preview](assets/preview.png)
+![DMS Peripherals preview](assets/preview.png)
 
 ## Features
 
@@ -28,18 +28,18 @@ Node.js is not bundled or automatically installed. Runtime JS dependencies and t
 
 ## Install
 
-Install Device Deck from the DMS plugin marketplace once its registry entry is merged. For manual installation:
+Install **Peripherals** from the DMS plugin marketplace once its registry entry is merged. For manual installation:
 
 ```sh
-git clone https://github.com/Trrrrw/device-deck.git
-cd device-deck
+git clone https://github.com/Trrrrw/dms-peripherals.git
+cd dms-peripherals
 scripts/install-local.sh
 ```
 
-Enable **Device Deck** in DMS Settings → Plugins, then add it to your bar.
+Enable **Peripherals** in DMS Settings → Plugins, then add it to your bar.
 Open its settings to scan and add devices. The eye controls bar visibility; the device icon toggles the mouse/keyboard icon.
 
-The internal ID remains `openMouse` to preserve existing settings. Uninstalling the plugin directory removes its runtime files. DMS-managed settings/history and system udev rules are separate user state.
+Uninstalling the plugin directory removes its runtime files. DMS-managed settings/history and system udev rules are separate user state.
 
 ## Development
 

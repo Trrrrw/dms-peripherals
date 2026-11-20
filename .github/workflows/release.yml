@@ -17,13 +17,13 @@ jobs:
           node-version: '22'
       - run: scripts/build-runtime.sh
       - run: python3 scripts/check-bundle.py
-      - run: tar -czf device-deck-linux-x86_64.tar.gz -C plugin .
-      - run: sha256sum device-deck-linux-x86_64.tar.gz > SHA256SUMS
+      - run: tar -czf dms-peripherals-linux-x86_64.tar.gz -C plugin .
+      - run: sha256sum dms-peripherals-linux-x86_64.tar.gz > SHA256SUMS
       - env:
           GH_TOKEN: ${{ github.token }}
         run: |
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
-            gh release upload "$GITHUB_REF_NAME" device-deck-linux-x86_64.tar.gz SHA256SUMS --clobber
+            gh release upload "$GITHUB_REF_NAME" dms-peripherals-linux-x86_64.tar.gz SHA256SUMS --clobber
           else
-            gh release create "$GITHUB_REF_NAME" device-deck-linux-x86_64.tar.gz SHA256SUMS --generate-notes
+            gh release create "$GITHUB_REF_NAME" dms-peripherals-linux-x86_64.tar.gz SHA256SUMS --generate-notes
           fi

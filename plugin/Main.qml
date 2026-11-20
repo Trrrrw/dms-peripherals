@@ -42,7 +42,7 @@ PluginComponent {
                 id: service
                 stateStore: root.pluginService
                 selectedDeviceId: parent.modelData.device_id
-                backendPath: root.pluginService ? root.pluginService.getPluginPath(root.pluginId) + "/bin/dms-openmouse" : ""
+                backendPath: root.pluginService ? root.pluginService.getPluginPath(root.pluginId) + "/bin/dms-peripherals" : ""
             }
         }
         onItemAdded: (index, item) => {

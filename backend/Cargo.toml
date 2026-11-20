@@ -1,9 +1,9 @@
 [package]
-name = "dms-openmouse"
+name = "dms-peripherals"
 version = "0.1.0"
 edition = "2024"
-description = "Stdio backend host for the Device Deck DMS plugin"
-repository = "https://github.com/Trrrrw/device-deck"
+description = "Stdio backend host for the DMS Peripherals plugin"
+repository = "https://github.com/Trrrrw/dms-peripherals"
 license = "AGPL-3.0-or-later"
 
 [features]

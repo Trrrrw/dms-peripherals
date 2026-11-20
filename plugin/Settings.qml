@@ -8,7 +8,7 @@ import qs.Modules.Plugins
 
 PluginSettings {
     id: root
-    pluginId: "openMouse"
+    pluginId: "peripherals"
     property var discovered: []
     property var saved: loadValue("devices", [])
     property string selected: loadValue("selectedDeviceId", "")
@@ -34,7 +34,7 @@ PluginSettings {
         const device = selectedDevice;
         if (!device || !/^[0-9a-f]{4}$/.test(device.vendor_id || "") || !/^[0-9a-f]{4}$/.test(device.product_id || "")) return "";
         const rule = 'SUBSYSTEM=="hidraw", ATTRS{idVendor}=="' + device.vendor_id + '", ATTRS{idProduct}=="' + device.product_id + '", TAG+="uaccess"';
-        return "echo '" + rule + "' | sudo tee /etc/udev/rules.d/70-openmouse-" + device.vendor_id + "-" + device.product_id + ".rules\nsudo udevadm control --reload-rules";
+        return "echo '" + rule + "' | sudo tee /etc/udev/rules.d/70-dms-peripherals-" + device.vendor_id + "-" + device.product_id + ".rules\nsudo udevadm control --reload-rules";
     }
 
     function select(device) {
@@ -227,7 +227,7 @@ PluginSettings {
     }
     Process {
         id: scan
-        command: [root.pluginService ? root.pluginService.getPluginPath("openMouse") + "/bin/dms-openmouse" : ""]
+        command: [root.pluginService ? root.pluginService.getPluginPath("peripherals") + "/bin/dms-peripherals" : ""]
         stdinEnabled: true
         onStarted: {
             write(JSON.stringify({id: "scan", method: "list_devices"}) + "\n");

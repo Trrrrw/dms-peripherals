@@ -618,7 +618,7 @@ copy of the Program in return for a fee.
 
                      END OF TERMS AND CONDITIONS
 
-    Device Deck - a DMS peripheral-management plugin powered by OpenMouse
+    DMS Peripherals - a DMS peripheral-management plugin powered by OpenMouse
     Copyright (C) 2026  Trrrrw
 
     This program is free software: you can redistribute it and/or modify
@@ -637,4 +637,4 @@ copy of the Program in return for a fee.
 If your software can interact with users remotely through a computer
 network, you should also make sure that it provides a way for users to
 get its source. This project provides source access via its public
-GitHub repository: https://github.com/Trrrrw/device-deck
+GitHub repository: https://github.com/Trrrrw/dms-peripherals

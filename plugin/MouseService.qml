@@ -3,7 +3,7 @@ import Quickshell.Io
 
 Item {
     id: root
-    property string backendPath: Qt.resolvedUrl("../backend/target/debug/dms-openmouse").toString().replace(/^file:\/\//, "")
+    property string backendPath: Qt.resolvedUrl("../backend/target/debug/dms-peripherals").toString().replace(/^file:\/\//, "")
     property string selectedDeviceId: ""
     onSelectedDeviceIdChanged: {
         status = null;
@@ -19,7 +19,7 @@ Item {
         refresh();
     }
     property var stateStore: null
-    property string stateId: "openMouse"
+    property string stateId: "peripherals"
     onStateStoreChanged: restore()
 
     function restore() {
@@ -172,7 +172,7 @@ Item {
             retry.restart();
         }
         stdout: SplitParser { onRead: line => root.receive(line) }
-        stderr: SplitParser { onRead: line => console.warn("OpenMouse:", line) }
+        stderr: SplitParser { onRead: line => console.warn("Peripherals:", line) }
     }
     Timer {
         id: retry

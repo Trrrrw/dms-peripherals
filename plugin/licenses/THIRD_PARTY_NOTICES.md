@@ -1,6 +1,6 @@
 # Third-party notices
 
-Device Deck is an unofficial DMS plugin. OpenMouse is an upstream project, not the publisher of this plugin.
+DMS Peripherals is an unofficial DMS plugin. OpenMouse is an upstream project, not the publisher of this plugin.
 
 - OpenMouse mouse-protocol: AGPL-3.0-or-later. https://github.com/OpenMouse-Project/mouse-protocol
 - OpenMouse keyboard-protocol: AGPL-3.0-or-later. https://github.com/OpenMouse-Project/keyboard-protocol

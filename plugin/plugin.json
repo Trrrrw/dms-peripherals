@@ -1,6 +1,6 @@
 {
-    "id": "openMouse",
-    "name": "Device Deck",
+    "id": "peripherals",
+    "name": "Peripherals",
     "description": "Manage peripherals through OpenMouse",
     "version": "0.1.0",
     "author": "trrrrw",

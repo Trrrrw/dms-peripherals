@@ -6,7 +6,7 @@ import shutil
 import subprocess
 import tempfile
 
-with tempfile.TemporaryDirectory(prefix='device-deck-refresh-') as directory:
+with tempfile.TemporaryDirectory(prefix='dms-peripherals-refresh-') as directory:
     root = Path(directory)
     shutil.copy(Path(__file__).resolve().parents[1] / 'plugin/MouseService.qml', root)
     backend = root / 'backend'

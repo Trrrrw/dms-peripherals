@@ -1,6 +1,6 @@
 # Corresponding source
 
-Device Deck source: https://github.com/Trrrrw/device-deck
+DMS Peripherals source: https://github.com/Trrrrw/dms-peripherals
 
 Build instructions: README.md and scripts/build-runtime.sh
 

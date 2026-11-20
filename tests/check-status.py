@@ -5,7 +5,7 @@ import shutil
 import subprocess
 import tempfile
 
-with tempfile.TemporaryDirectory(prefix='openmouse-status-') as directory:
+with tempfile.TemporaryDirectory(prefix='dms-peripherals-status-') as directory:
     root = Path(directory)
     shutil.copy(Path(__file__).resolve().parents[1] / 'plugin/MouseService.qml', root)
     (root / 'shell.qml').write_text('''import QtQuick

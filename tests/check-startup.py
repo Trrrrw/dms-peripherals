@@ -6,7 +6,7 @@ import subprocess
 import tempfile
 
 source = Path(__file__).resolve().parents[1] / 'plugin/StartupCheck.qml'
-with tempfile.TemporaryDirectory(prefix='openmouse-gate-') as directory:
+with tempfile.TemporaryDirectory(prefix='dms-peripherals-gate-') as directory:
     root = Path(directory)
     (root / 'Common').mkdir()
     (root / 'Common/qmldir').write_text('module qs.Common\nsingleton Proc 1.0 Proc.qml\n')
