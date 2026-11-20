@@ -17,19 +17,6 @@ Column {
     onRequestedTabChanged: tab = requestedTab
     property bool showDiagnostic: false
     property bool showError: false
-    property bool detailAttempted: false
-    onReaderChanged: detailAttempted = false
-    Timer {
-        interval: 300
-        repeat: true
-        running: root.visible && !!root.reader && !root.detailAttempted
-        onTriggered: {
-            if (!root.reader.busy) {
-                root.detailAttempted = true;
-                root.reader.readDetails();
-            }
-        }
-    }
     readonly property var tabs: deviceState.debounceMs != null ? ["概览", "性能", "按键", "高级"] : ["概览", "性能", "高级"]
     spacing: Theme.spacingM
     onDeviceChanged: { tab = "概览"; showError = false; }
@@ -58,7 +45,39 @@ Column {
                 Accessible.role: Accessible.StaticText
             }
         }
-        DButton { text: root.reader?.busy ? "读取中…" : "刷新"; iconName: "refresh"; enabled: !!root.reader && !root.reader.busy; onClicked: root.reader.readDetails() }
+        DButton {
+            id: refreshButton
+            implicitWidth: refreshContent.implicitWidth + horizontalPadding * 2
+            tooltipText: root.reader?.busy ? "正在读取设备" : "刷新设备状态"
+            enabled: !!root.reader && !root.reader.writing
+            Accessible.name: "刷新设备状态"
+            onClicked: root.reader.readDetails()
+            Row {
+                id: refreshContent
+                anchors.centerIn: parent
+                spacing: Theme.spacingS
+                DIcon {
+                    id: refreshIcon
+                    name: "refresh"
+                    size: refreshButton.iconSize
+                    color: refreshButton.contentColor
+                    anchors.verticalCenter: parent.verticalCenter
+                    RotationAnimator on rotation {
+                        from: 0; to: 360; duration: 1000
+                        loops: Animation.Infinite
+                        running: !!root.reader?.busy && root.visible
+                        onRunningChanged: if (!running) refreshIcon.rotation = 0
+                    }
+                }
+                StyledText {
+                    text: "刷新"
+                    font.pixelSize: refreshButton.labelSize
+                    font.weight: Font.Medium
+                    color: refreshButton.contentColor
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+            }
+        }
     }
     StyledText {
         width: parent.width
@@ -111,7 +130,7 @@ Column {
                     iconName: root.deviceState.activeDpiStage === index ? "radio_button_checked" : "radio_button_unchecked"
                     minimumWidth: 100
                     maximumWidth: 100
-                    enabled: !!root.caps.activeDpiStage && !root.reader?.busy
+                    enabled: !!root.caps.activeDpiStage && !root.reader?.writing
                     onClicked: root.write("activeDpiStage", index)
                 }
             }
@@ -174,7 +193,7 @@ Column {
                     minimumWidth: 36
                     maximumWidth: 36
                     horizontalPadding: Theme.spacingXS
-                    enabled: !!root.caps.activeDpiStage && !root.reader?.busy
+                    enabled: !!root.caps.activeDpiStage && !root.reader?.writing
                     onClicked: root.write("activeDpiStage", index)
                 }
                 DTextField { id: stageValue; Layout.preferredWidth: 90; text: String(modelData); validator: IntValidator { bottom: 1; top: 100000 } }
@@ -186,7 +205,7 @@ Column {
                     step: 1
                     value: root.dpiIndex(stageRow.modelData)
                     showValue: false
-                    enabled: !!root.caps.dpiStages && !root.reader?.busy && root.dpiValues.length > 1
+                    enabled: !!root.caps.dpiStages && !root.reader?.writing && root.dpiValues.length > 1
                     Accessible.name: "档位 " + (stageRow.index + 1) + " DPI"
                     onSliderValueChanged: newValue => stageValue.text = String(root.dpiValues[newValue])
                     onSliderDragFinished: finalValue => {
@@ -195,13 +214,13 @@ Column {
                         value = Qt.binding(() => root.dpiIndex(stageRow.modelData));
                     }
                 }
-                DButton { text: "保存"; enabled: !!root.caps.dpiStages && !root.reader?.busy && stageValue.text.length > 0 && Number(stageValue.text) !== modelData; onClicked: root.write("dpiStages", {index:index, dpi:Number(stageValue.text)}) }
+                DButton { text: "保存"; enabled: !!root.caps.dpiStages && !root.reader?.writing && stageValue.text.length > 0 && Number(stageValue.text) !== modelData; onClicked: root.write("dpiStages", {index:index, dpi:Number(stageValue.text)}) }
             }
         }
         RowLayout {
             width: parent.width
             DTextField { id: dpi; Layout.fillWidth: true; placeholderText: "自定义 DPI"; validator: IntValidator { bottom: 1; top: 100000 } }
-            DButton { text: "应用"; enabled: !!root.caps.dpi && !root.reader?.busy && dpi.text.length > 0; onClicked: root.write("dpi", Number(dpi.text)) }
+            DButton { text: "应用"; enabled: !!root.caps.dpi && !root.reader?.writing && dpi.text.length > 0; onClicked: root.write("dpi", Number(dpi.text)) }
         }
     }
     ControlCard {
@@ -219,7 +238,7 @@ Column {
                     iconName: root.deviceState.pollingRateHz === modelData ? "radio_button_checked" : "radio_button_unchecked"
                     minimumWidth: 120
                     maximumWidth: 120
-                    enabled: !!root.caps.pollingRateHz && !root.reader?.busy
+                    enabled: !!root.caps.pollingRateHz && !root.reader?.writing
                     onClicked: root.write("pollingRateHz", modelData)
                 }
             }
@@ -233,7 +252,7 @@ Column {
             property var values: root.deviceState.supportedLiftOffDistances || ["Low", "High"]
             model: values.map(value => value === "Low" ? "低" : value === "High" ? "高" : "中")
             currentIndex: values.indexOf(root.deviceState.liftOffDistance)
-            enabled: !!root.caps.liftOffDistance && !root.reader?.busy
+            enabled: !!root.caps.liftOffDistance && !root.reader?.writing
             onSelectionChanged: (index, selected) => { if (selected) root.write("liftOffDistance", values[index]); }
         }
     }
@@ -248,7 +267,7 @@ Column {
                 width: parent.width
                 visible: root.deviceState[modelData.key] != null
                 StyledText { Layout.fillWidth: true; text: modelData.label; color: Theme.surfaceText }
-                DToggle { id: processingToggle; checked: root.deviceState[modelData.key] === true; enabled: !!root.caps[modelData.key] && !root.reader?.busy; onToggled: checked => { root.write(modelData.key, checked); processingToggle.checked = Qt.binding(() => root.deviceState[modelData.key] === true); } }
+                DToggle { id: processingToggle; checked: root.deviceState[modelData.key] === true; enabled: !!root.caps[modelData.key] && !root.reader?.writing; onToggled: checked => { root.write(modelData.key, checked); processingToggle.checked = Qt.binding(() => root.deviceState[modelData.key] === true); } }
             }
         }
         StyledText { visible: root.deviceState.angleTuning != null; text: "角度微调  " + root.deviceState.angleTuning + "°（当前驱动只读）"; color: Theme.surfaceVariantText }
@@ -261,7 +280,7 @@ Column {
             width: parent.width
             options: (root.options.debounceMs || []).map(value => value + " ms")
             currentValue: root.deviceState.debounceMs + " ms"
-            enabled: !!root.caps.debounceMs && !root.reader?.busy
+            enabled: !!root.caps.debounceMs && !root.reader?.writing
             onValueChanged: value => { root.write("debounceMs", parseInt(value)); currentValue = Qt.binding(() => root.deviceState.debounceMs + " ms"); }
         }
     }
@@ -273,7 +292,7 @@ Column {
             width: parent.width
             options: (root.options.sleepTimeout || []).map(value => value + " 秒")
             currentValue: root.deviceState.sleepTimeout + " 秒"
-            enabled: !!root.caps.sleepTimeout && !root.reader?.busy
+            enabled: !!root.caps.sleepTimeout && !root.reader?.writing
             onValueChanged: value => { root.write("sleepTimeout", parseInt(value)); currentValue = Qt.binding(() => root.deviceState.sleepTimeout + " 秒"); }
         }
     }

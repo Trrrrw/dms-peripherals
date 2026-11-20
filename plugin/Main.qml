@@ -16,25 +16,15 @@ PluginComponent {
     property string activeDeviceId: ""
     readonly property var activeDevice: configuredDevices.find(device => device.device_id === activeDeviceId) || configuredDevices[0] || null
     readonly property var activeReader: activeDevice ? readers[activeDevice.device_id] || null : null
-    property bool detailsRequested: false
+    function refreshActiveDevice() {
+        if (interactionActive && activeReader) activeReader.ensureFresh();
+    }
     function openDevice(deviceId) {
         activeDeviceId = deviceId;
-        detailsRequested = false;
         if (!interactionActive) triggerPopout();
     }
-    onActiveDeviceChanged: detailsRequested = false
-    onInteractionActiveChanged: if (interactionActive) detailsRequested = false
-    Timer {
-        interval: 250
-        repeat: true
-        running: root.interactionActive && !root.detailsRequested
-        onTriggered: {
-            if (root.activeReader && !root.activeReader.busy) {
-                root.detailsRequested = true;
-                root.activeReader.readDetails();
-            }
-        }
-    }
+    onActiveReaderChanged: refreshActiveDevice()
+    onInteractionActiveChanged: refreshActiveDevice()
     property var readers: ({})
     property real detailsHeight: 180
 

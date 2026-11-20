@@ -54,6 +54,7 @@ cargo clippy --manifest-path backend/Cargo.toml --locked -- -D warnings
 node --test tests/*.test.mjs
 python3 tests/check-status.py
 python3 tests/check-startup.py
+python3 tests/check-refresh.py
 python3 scripts/check-bundle.py
 ```
 

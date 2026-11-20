@@ -12,6 +12,8 @@ Item {
         operationMessage = "";
         lastSuccess = "";
         acquiredAt = 0;
+        lastAttemptAt = 0;
+        pendingSetting = null;
         message = selectedDeviceId ? "正在连接" : "请在设置中添加设备";
         restore();
         refresh();
@@ -46,11 +48,37 @@ Item {
     property var details: null
     property string operationMessage: ""
 
+    property double lastAttemptAt: 0
+    property bool writing: false
+    property var pendingSetting: null
+    onBusyChanged: {
+        if (!busy && pendingSetting) {
+            const pending = pendingSetting;
+            pendingSetting = null;
+            Qt.callLater(() => setSetting(pending.key, pending.value));
+        }
+    }
+    function ensureFresh(maxAgeMs) {
+        const limit = maxAgeMs === undefined ? 30000 : maxAgeMs;
+        if (busy || Date.now() - Math.max(acquiredAt, lastAttemptAt) < limit) return;
+        refresh();
+    }
     function readDetails() { operation("get_details", "", null); }
-    function setSetting(key, value) { operation("set_setting", key, value); }
+    function setSetting(key, value) {
+        if (busy) {
+            if (!writing) {
+                pendingSetting = {key: key, value: value};
+                writing = true;
+            }
+            return;
+        }
+        operation("set_setting", key, value);
+    }
     function operation(method, key, value) {
         if (!selectedDeviceId || !backend.running || busy) return;
         busy = true;
+        writing = method === "set_setting";
+        lastAttemptAt = Date.now();
         operationMessage = method === "set_setting" ? "正在写入并回读…" : "正在读取设备设置…";
         watchdog.restart();
         backend.write(JSON.stringify({id: method, method: method, device_id: selectedDeviceId, key: key, value: value}) + "\n");
@@ -103,6 +131,7 @@ Item {
             message = "";
             operationMessage = reply.id === "set_setting" ? "设置已写入，回读一致" : "";
             busy = false;
+            writing = false;
             watchdog.stop();
         } else if (reply.id === "status") {
             if (!selectedDeviceId || reply.result.device_id !== selectedDeviceId) {
@@ -119,13 +148,16 @@ Item {
             recordHistory();
             message = "";
             busy = false;
+            writing = false;
             watchdog.stop();
         }
     }
 
     function fail(text) {
+        pendingSetting = null;
         message = text;
         busy = false;
+        writing = false;
         watchdog.stop();
     }
 
@@ -151,7 +183,7 @@ Item {
         interval: 30000
         running: true
         repeat: true
-        onTriggered: root.refresh()
+        onTriggered: root.ensureFresh(29000)
     }
     Timer {
         id: watchdog
