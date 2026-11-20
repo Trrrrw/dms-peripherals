@@ -1,34 +1,33 @@
 # DMS Peripherals
 
-A DMS peripheral-management plugin powered by [OpenMouse](https://github.com/OpenMouse-Project).
+English | [简体中文](README.zh-CN.md)
+
+A [DankMaterialShell (DMS)](https://github.com/AvengeMedia/DankMaterialShell) peripheral-management plugin powered by [OpenMouse](https://github.com/OpenMouse-Project).  
 This is an independent, unofficial plugin, not an OpenMouse or DMS release.
 
-![DMS Peripherals preview](assets/preview.png)
+<img src="assets/preview.png" alt="DMS Peripherals preview" width="480" />
 
 ## Features
 
-- Discover devices through the pinned OpenMouse mouse and keyboard driver registries, including devices awaiting Linux access permissions
-- Show multiple devices in the bar, with independent visibility and mouse/keyboard icons
-- Switch devices in the popout; click a bar device to open its controls
-- Device-provided overview, performance, buttons and advanced settings
-- Write settings through upstream drivers and read back the result
-- Preserve the last successful reading, display its acquisition time, and color its age: green up to 60 seconds, amber up to five minutes, red afterward
-- Keep seven days of battery samples, recorded every five minutes while DMS runs
-- Provide narrow VID/PID udev commands; **unplug and reconnect the device/receiver after running them**, then recheck access
+- **Device discovery**: Detects supported mice and keyboards via pinned OpenMouse driver registries, including devices awaiting Linux HID permissions.
+- **Multi-device bar & popout**: Shows multiple devices in the bar with independent visibility and mouse/keyboard icons; click any bar item to open its controls.
+- **Verified settings**: Exposes driver-supported overview, performance (DPI stages, polling rate, LOD, signal processing), button debounce, and sleep controls, reading back each write to verify it applied.
+- **Battery history & freshness**: Preserves the last successful reading with age indicators (green ≤ 60s, amber ≤ 5m, red > 5m) and records 7 days of battery history at 5-minute intervals.
+- **Guided Linux permissions**: Generates narrow per-VID/PID `udev` rules right in Settings.
 
-Available controls come from the upstream driver and returned capability flags. A matching driver is not a promise that every possible hardware feature exists in this plugin's UI. Errors from upstream are shown in the popout and can be reported through Issues.
+> Available controls depend on the upstream driver and its reported capabilities. Errors returned by upstream drivers are shown in the popout and can be reported via Issues.
 
 ## Requirements
 
 - DMS 2.0 or newer on Linux x86_64
-- System Node.js 20 or newer, available on DMS's PATH
-- Linux HID access for the selected device
+- System Node.js 20 or newer available on DMS's `PATH`
+- Linux `hidraw` access for target devices
 
-Node.js is not bundled or automatically installed. Runtime JS dependencies and the static Rust backend live inside the plugin directory. Runtime npm, Cargo, GTK development packages, or a running OpenMouse Bridge service are unnecessary.
+Node.js is not bundled or auto-installed. All other runtime dependencies and the static Rust host are bundled in `plugin/bin/`, so runtime `npm`, `cargo`, GTK dev packages, or a separate OpenMouse Bridge daemon are not required.
 
-## Install
+## Installation
 
-Install **Peripherals** from the DMS plugin marketplace once its registry entry is merged. For manual installation:
+Install **Peripherals** from the DMS plugin marketplace once available, or install manually:
 
 ```sh
 git clone https://github.com/Trrrrw/dms-peripherals.git
@@ -36,10 +35,11 @@ cd dms-peripherals
 scripts/install-local.sh
 ```
 
-Enable **Peripherals** in DMS Settings → Plugins, then add it to your bar.
-Open its settings to scan and add devices. The eye controls bar visibility; the device icon toggles the mouse/keyboard icon.
+1. Enable **Peripherals** in **DMS Settings → Plugins** and add it to your bar.
+2. Open the plugin settings to scan and add devices.
+3. If a device requires Linux HID access, run the generated `udev` command, **unplug and reconnect the device/receiver**, and recheck access.
 
-Uninstalling the plugin directory removes its runtime files. DMS-managed settings/history and system udev rules are separate user state.
+Uninstalling the plugin directory removes its runtime files; DMS-managed settings/history and system `udev` rules remain separate user state.
 
 ## Architecture
 
@@ -52,8 +52,12 @@ flowchart LR
 
 ## Development
 
-Source is in `plugin/` (QML), `backend/src/` (Rust stdio host), and `backend/helper/` (OpenMouse driver integration). The runtime HID adapter is from OpenMouse Bridge at `30a3290ef88200f83a8083a88a3143d5e12eeaa8`.
-`runtime/package-lock.json` pins protocol packages and native dependencies.
+- `plugin/` — QML UI, service layer, and bundled installable runtime (`plugin/bin/`, `plugin/licenses/`)
+- `backend/src/` — Static Rust stdio host
+- `backend/helper/` — OpenMouse driver integration and HID descriptor parser
+- `runtime/` — Pinned `package-lock.json` and the MIT-licensed HID adapter from OpenMouse Bridge (`30a3290ef88200f83a8083a88a3143d5e12eeaa8`)
+
+Build and verify:
 
 ```sh
 rustup target add x86_64-unknown-linux-musl
@@ -67,12 +71,10 @@ python3 tests/check-refresh.py
 python3 scripts/check-bundle.py
 ```
 
-The QML checks require Quickshell. Generated runtime files are committed so the plugin marketplace can install without a compiler or npm. Run the build script after changing Rust, helper code, or dependency locks, and commit the updated runtime alongside its source.
+The QML checks require Quickshell. Generated runtime files under `plugin/bin/` are committed so the plugin marketplace can install directly without a compiler or `npm`—run `scripts/build-runtime.sh` after changing Rust, helper code, or lockfiles, and commit the updated runtime alongside the source. Run `scripts/install-local.sh` to atomically update a local installation and restart DMS.
 
-To update an existing local installation, copy the QML/helper files and atomically replace a running executable (copy to a new filename, then rename). Restart DMS when helper QML or manifests change, since DMS may cache them.
+## License
 
-## License and provenance
-
-AGPL-3.0-or-later. See [LICENSE](LICENSE) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Dependency license texts are included in the installable plugin.
+AGPL-3.0-or-later. See [LICENSE](LICENSE) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Dependency license texts are bundled inside `plugin/licenses/`.
 
 Developed with AI assistance.
