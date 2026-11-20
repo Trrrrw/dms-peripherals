@@ -73,7 +73,7 @@ PluginSettings {
     }
     StyledText {
         visible: root.saved.length === 0
-        text: "尚未添加设备，扫描后选择要显示的鼠标"
+        text: "尚未添加设备，扫描后选择要显示的设备"
         color: Theme.surfaceVariantText
     }
     Repeater {
@@ -122,7 +122,7 @@ PluginSettings {
     StyledText {
         width: parent.width
         visible: root.selectedDevice?.supported === false
-        text: "此设备尚未被 Bridge 识别为支持的鼠标，授权不代表获得协议支持"
+        text: "此设备尚未在支持的驱动列表中，授权不代表获得协议支持"
         wrapMode: Text.Wrap
         color: Theme.surfaceVariantText
     }

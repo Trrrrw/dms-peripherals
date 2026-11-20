@@ -40,7 +40,7 @@ PluginComponent {
 
     function battery(device) {
         const status = readers[device.device_id]?.status;
-        return status ? status.battery_percent + "%" : "—";
+        return typeof status?.battery_percent === "number" ? status.battery_percent + "%" : "—";
     }
 
     Repeater {

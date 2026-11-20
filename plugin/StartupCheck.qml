@@ -10,7 +10,7 @@ QtObject {
                 return;
             }
             done({
-                title: "OpenMouse 需要 Node.js 20 或更新版本",
+                title: "Device Deck 需要 Node.js 20 或更新版本",
                 details: "请通过发行版包管理器安装 Node.js，并确保 DMS 的 PATH 中可以找到 node，然后重新启用插件。\n\n插件不会安装或管理系统 Node.js。"
             });
         });

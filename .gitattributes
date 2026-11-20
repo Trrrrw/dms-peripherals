@@ -1,0 +1,3 @@
+# Generated installable runtime; review the source and lockfiles instead.
+plugin/bin/** -diff
+assets/*.png binary

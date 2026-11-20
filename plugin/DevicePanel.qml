@@ -9,6 +9,9 @@ Column {
     readonly property var deviceState: reader?.details?.status || ({})
     readonly property var caps: reader?.details?.capabilities || ({})
     readonly property var options: reader?.details?.options || ({})
+    property double clockTime: Date.now()
+    readonly property double ageSeconds: reader?.acquiredAt ? Math.max(0, (clockTime - reader.acquiredAt) / 1000) : Infinity
+    Timer { interval: 1000; repeat: true; running: root.visible; onTriggered: root.clockTime = Date.now() }
     property string tab: "概览"
     property string requestedTab: "概览"
     onRequestedTabChanged: tab = requestedTab
@@ -56,6 +59,13 @@ Column {
             }
         }
         DButton { text: root.reader?.busy ? "读取中…" : "刷新"; iconName: "refresh"; enabled: !!root.reader && !root.reader.busy; onClicked: root.reader.readDetails() }
+    }
+    StyledText {
+        width: parent.width
+        text: root.reader?.acquiredAt ? "数据获取于 " + root.reader.lastSuccess + " · " + (root.ageSeconds < 60 ? Math.floor(root.ageSeconds) + " 秒前" : Math.floor(root.ageSeconds / 60) + " 分钟前") : "尚未获取设备数据"
+        color: !root.reader?.acquiredAt ? Theme.surfaceVariantText : root.ageSeconds <= 60 ? Theme.success : root.ageSeconds <= 300 ? Theme.warning : Theme.error
+        font.pixelSize: Theme.fontSizeSmall
+        Accessible.role: Accessible.StaticText
     }
     DButtonGroup { model: root.tabs; currentIndex: root.tabs.indexOf(root.tab); onSelectionChanged: (index, selected) => { if (selected) root.tab = root.tabs[index]; } }
     Column {

@@ -11,6 +11,7 @@ Item {
         history = [];
         operationMessage = "";
         lastSuccess = "";
+        acquiredAt = 0;
         message = selectedDeviceId ? "正在连接" : "请在设置中添加设备";
         restore();
         refresh();
@@ -27,6 +28,8 @@ Item {
         if (!cached || !cached.status || (selectedDeviceId && cached.status.device_id !== selectedDeviceId) || typeof cached.status.battery_percent !== "number" || typeof cached.time !== "string")
             return;
         status = cached.status;
+        details = cached.details || null;
+        acquiredAt = cached.acquiredAt || 0;
         lastSuccess = cached.time;
         message = "正在刷新，当前显示历史数据";
     }
@@ -57,6 +60,7 @@ Item {
     property string message: "正在连接"
     property bool busy: false
     property string lastSuccess: ""
+    property double acquiredAt: 0
 
     function refresh() {
         if (!selectedDeviceId) {
@@ -66,9 +70,7 @@ Item {
         }
         if (!backend.running || busy)
             return;
-        busy = true;
-        watchdog.restart();
-        backend.write(JSON.stringify({id: "devices", method: "list_devices"}) + "\n");
+        readDetails();
     }
 
     function receive(line) {
@@ -94,8 +96,9 @@ Item {
             const value = details.status;
             status = {device_id: selectedDeviceId, reported_name: value.name, battery_percent: value.batteryPercent,
                 charging: value.batteryState === "Charging", dpi: value.dpi, polling_rate_hz: value.pollingRateHz};
-            lastSuccess = Qt.formatDateTime(new Date(), "yyyy-MM-dd hh:mm:ss");
-            if (stateStore) stateStore.savePluginState(stateId, "reading:" + selectedDeviceId, {status: status, time: lastSuccess});
+            acquiredAt = Date.now();
+            lastSuccess = Qt.formatDateTime(new Date(acquiredAt), "yyyy-MM-dd hh:mm:ss");
+            if (stateStore) stateStore.savePluginState(stateId, "reading:" + selectedDeviceId, {status: status, time: lastSuccess, acquiredAt: acquiredAt, details: details});
             recordHistory();
             message = "";
             operationMessage = reply.id === "set_setting" ? "设置已写入，回读一致" : "";
@@ -109,9 +112,10 @@ Item {
                 return;
             }
             status = reply.result;
-            lastSuccess = Qt.formatDateTime(new Date(), "yyyy-MM-dd hh:mm:ss");
+            acquiredAt = Date.now();
+            lastSuccess = Qt.formatDateTime(new Date(acquiredAt), "yyyy-MM-dd hh:mm:ss");
             if (stateStore)
-                stateStore.savePluginState(stateId, "reading:" + selectedDeviceId, {status: status, time: lastSuccess});
+                stateStore.savePluginState(stateId, "reading:" + selectedDeviceId, {status: status, time: lastSuccess, acquiredAt: acquiredAt, details: details});
             recordHistory();
             message = "";
             busy = false;

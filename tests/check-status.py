@@ -25,7 +25,10 @@ ShellRoot {
         mouse.receive(JSON.stringify({id: "status", result: {device_id: "test", battery_percent: 65}}));
         restored.restore();
         ok = ok && restored.status !== null && restored.status.battery_percent === 65 && restored.lastSuccess !== "" && restored.message.length > 0;
+        const acquired = mouse.acquiredAt;
+        ok = ok && acquired > 0 && restored.acquiredAt === acquired;
         mouse.fail("probe failed");
+        ok = ok && mouse.acquiredAt === acquired;
         ok = ok && mouse.status !== null && mouse.status.battery_percent === 65 && mouse.message === "probe failed";
         mouse.receive(JSON.stringify({id: "status", result: {device_id: "test", battery_percent: 64}}));
         ok = ok && mouse.status.battery_percent === 64 && mouse.message === "";

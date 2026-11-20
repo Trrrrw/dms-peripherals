@@ -1,0 +1,15 @@
+name: Check
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: cargo test --manifest-path backend/Cargo.toml --locked
+      - run: cargo clippy --manifest-path backend/Cargo.toml --locked -- -D warnings
+      - run: node --test tests/*.test.mjs
+      - run: python3 scripts/check-bundle.py

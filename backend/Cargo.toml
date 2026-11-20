@@ -2,12 +2,16 @@
 name = "dms-openmouse"
 version = "0.1.0"
 edition = "2024"
+description = "Stdio backend host for the Device Deck DMS plugin"
+repository = "https://github.com/Trrrrw/device-deck"
+license = "AGPL-3.0-or-later"
 
 [features]
 default = ["hardware"]
-hardware = ["dep:openmouse-bridge", "dep:hidapi"]
+hardware = []
 
 [dependencies]
-hidapi = { version = "2.6.6", features = ["macos-shared-device"], optional = true }
-openmouse-bridge = { git = "https://github.com/OpenMouse-Project/OpenMouse-Bridge", rev = "30a3290ef88200f83a8083a88a3143d5e12eeaa8", optional = true }
 serde_json = "1"
+
+[profile.release]
+strip = true

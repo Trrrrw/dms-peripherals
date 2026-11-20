@@ -1,152 +1,68 @@
-# DMS OpenMouse
+# Device Deck
 
-基于 [OpenMouse](https://github.com/OpenMouse-Project/openmouse) 的 DankMaterialShell（DMS）外设状态与控制插件，已实现设备状态显示和分类设置弹窗。
+A DMS peripheral-management plugin powered by [OpenMouse](https://github.com/OpenMouse-Project).
+This is an independent, unofficial plugin, not an OpenMouse or DMS release.
 
-- 使用 QML 编写 DMS 界面
-- 使用 Rust 编写独立后端，直接依赖 OpenMouse Bridge crate，复用其设备控制能力
-- QML 与 Rust 后端通过标准输入输出传递 JSON，无需本地 HTTP 服务或 C ABI
+![Device Deck preview](assets/preview.png)
 
-部分设备仍需 OpenMouse 的 Node.js helper 和协议库，具体设备与功能支持范围待验证。
+## Features
 
-## 当前进度
+- Discover devices through the pinned OpenMouse mouse and keyboard driver registries, including devices awaiting Linux access permissions
+- Show multiple devices in the bar, with independent visibility and mouse/keyboard icons
+- Switch devices in the popout; click a bar device to open its controls
+- Device-provided overview, performance, buttons and advanced settings
+- Write settings through upstream drivers and read back the result
+- Preserve the last successful reading, display its acquisition time, and color its age: green up to 60 seconds, amber up to five minutes, red afterward
+- Keep seven days of battery samples, recorded every five minutes while DMS runs
+- Provide narrow VID/PID udev commands; **unplug and reconnect the device/receiver after running them**, then recheck access
 
-已添加 Rust 后端及 DMS 面板电量和设备分类弹窗，支持状态读取以及按设备能力提供的设置写入和回读验证。
-Bridge 固定到 `30a3290ef88200f83a8083a88a3143d5e12eeaa8`，直接调用公开的 `drivers` API，不启动 Bridge HTTP 服务或托盘。
+Available controls come from the upstream driver and returned capability flags. A matching driver is not a promise that every possible hardware feature exists in this plugin's UI. Errors from upstream are shown in the popout and can be reported through Issues.
 
-## 构建与验证
+## Requirements
 
-```sh
-cargo build --manifest-path backend/Cargo.toml
-cargo test --manifest-path backend/Cargo.toml
-```
+- DMS 2.0 or newer on Linux x86_64
+- System Node.js 20 or newer, available on DMS's PATH
+- Linux HID access for the selected device
 
-Linux 构建仍会编译上游 crate 的 GUI 依赖，需要 GTK 3、Cairo、AppIndicator、libudev 等开发库及 `pkg-config`。
-当前环境已通过默认硬件功能的构建与协议测试。已枚举到 `ATK:373b:1085`；
-用户配置 udev 规则并重插接收器后，已成功读取 VXE R1 SE+ 的电量、DPI 和回报率。
-QML 通信层已验证能接收后端响应；完整 DMS 界面尚待实际加载与视觉验证。
+Node.js is not bundled or automatically installed. Runtime JS dependencies and the static Rust backend live inside the plugin directory. Runtime npm, Cargo, GTK development packages, or a running OpenMouse Bridge service are unnecessary.
 
-仅验证通信层（禁用硬件，设备请求明确返回 `hardware_disabled`）：
+## Install
 
-```sh
-cargo test --manifest-path backend/Cargo.toml --no-default-features
-cargo clippy --manifest-path backend/Cargo.toml --no-default-features -- -D warnings
-```
-
-## 通信协议
-
-后端逐行读取 stdin，每行返回一个 JSON 对象并立即刷新 stdout；EOF 时退出。
-`id` 为字符串或非负整数。当前请求示例：
-
-```json
-{"id":1,"method":"list_devices"}
-{"id":2,"method":"get_status","device_id":"ATK:373b:1085"}
-```
-
-`device_id` 应使用枚举返回值。响应为 `{"id":1,"result":...}` 或
-`{"id":1,"error":{"code":"...","message":"..."}}`。
-状态包含电量、充电状态、DPI、回报率和切换模式；上游未提供的可选字段为 `null`。
-Bridge 枚举失败时会返回空列表，因此空列表不能区分无设备与枚举失败。
-状态读取目前按品牌选择设备；同品牌存在多个设备时后端拒绝读取，防止误报。
-
-大部分品牌的状态读取需要 Node.js 和上游 `native-hid` helper 的完整依赖。
-开发时 Bridge 会寻找其源码目录下的 helper；发布时需把准备好的 `native-hid/`
-放在后端可执行文件旁，具体布局见上游 `src/drivers/native_hid.rs`。
-仅下载 Rust crate 不会自动安装 helper 的 npm 依赖。
-HID 权限问题应按具体 VID/PID 配置，避免授予全部设备访问权限。
-
-## DMS 插件
-
-`plugin/` 是插件目录。横向、纵向面板显示电量，点击打开设备状态弹窗。
-每 30 秒分别刷新已开启状态栏显示的设备，读取失败时保留上次成功读数，并在弹窗显示错误及上次成功时间，后端退出后每 5 秒重试。
-当前上游可能返回 CID/MID 探测失败；此时显示错误，等待下次刷新。
-
-部署目录必须包含：
-
-```text
-openMouse/
-  plugin.json
-  Main.qml
-  MouseService.qml
-  Settings.qml
-  bin/
-    dms-openmouse
-    native-hid/       # 完整 helper，包含 node_modules
-```
-
-本工作区已准备 `plugin/bin/` 的开发运行文件，二进制和 npm 依赖不纳入 Git。
-重新构建后更新二进制：
+Install Device Deck from the DMS plugin marketplace once its registry entry is merged. For manual installation:
 
 ```sh
-mkdir -p plugin/bin
-cp backend/target/debug/dms-openmouse plugin/bin/
+git clone https://github.com/Trrrrw/device-deck.git
+cd device-deck
+scripts/install-local.sh
 ```
 
-将插件目录复制到 DMS 用户插件目录后，在插件设置中启用 OpenMouse，再在面板布局中添加它：
+Enable **Device Deck** in DMS Settings → Plugins, then add it to your bar.
+Open its settings to scan and add devices. The eye controls bar visibility; the device icon toggles the mouse/keyboard icon.
+
+The internal ID remains `openMouse` to preserve existing settings. Uninstalling the plugin directory removes its runtime files. DMS-managed settings/history and system udev rules are separate user state.
+
+## Development
+
+Source is in `plugin/` (QML), `backend/src/` (Rust stdio host), and `backend/helper/` (OpenMouse driver integration). The runtime HID adapter is from OpenMouse Bridge at `30a3290ef88200f83a8083a88a3143d5e12eeaa8`.
+`runtime/package-lock.json` pins protocol packages and native dependencies.
 
 ```sh
-mkdir -p ~/.config/dms/plugins/openMouse
-cp -a plugin/. ~/.config/dms/plugins/openMouse/
-```
-
-准备 helper 时，应使用上面固定的 Bridge commit，进入其 `native-hid/` 目录运行
-`npm ci`（npm 12 需要本次命令添加 `--allow-git=all`），然后将整个目录复制到 `plugin/bin/native-hid/`。
-
-设备权限规则（`/etc/udev/rules.d/70-dms-openmouse.rules`）：
-
-```udev
-SUBSYSTEM=="hidraw", ATTRS{idVendor}=="373b", ATTRS{idProduct}=="1085", TAG+="uaccess"
-```
-
-执行 `sudo udevadm control --reload-rules` 后重插接收器。此规则仅覆盖该 VID/PID。
-
-## 下一步
-
-1. 在运行中的 DMS 中验证横竖面板、弹窗布局和拔插恢复
-2. 读取稳定后加入设备选择及设置写入
-
-## Node.js 运行时
-
-Node.js ≥20 是用户提供的系统依赖，需要在 DMS 进程的 PATH 中可用。
-插件通过 `dependencies: ["node"]` 声明依赖，并在启用前使用 `startupCheck`
-执行 `node --version` 检查可用性和版本；检查失败时显示安装指引。
-插件不下载、复制或自动安装 Node.js，也不加载用户的 shell/nvm 初始化配置。
-
-helper 和其 JS/npm 依赖由发布流程准备并放在插件自己的 `bin/native-hid/` 中，
-用户运行插件无需 npm。卸载插件目录会移除这些私有文件，系统 Node.js 保留。
-系统 udev 规则位于插件目录外，需要单独管理。
-
-检查启动依赖逻辑：
-
-```sh
+rustup target add x86_64-unknown-linux-musl
+scripts/build-runtime.sh
+cargo test --manifest-path backend/Cargo.toml --locked
+cargo clippy --manifest-path backend/Cargo.toml --locked -- -D warnings
+node --test tests/*.test.mjs
+python3 tests/check-status.py
 python3 tests/check-startup.py
+python3 scripts/check-bundle.py
 ```
 
-设置页可扫描当前连接的设备，添加并选择面板使用的设备，也可移除已保存项。该功能保存设备选择，不执行蓝牙配对；未配置选择时提示在设置中添加设备，不自动选择设备。
+The QML checks require Quickshell. Generated runtime files are committed so the plugin marketplace can install without a compiler or npm. Run the build script after changing Rust, helper code, or dependency locks, and commit the updated runtime alongside its source.
 
-Linux 扫描仅显示匹配 OpenMouse 协议库 HID 支持过滤表的 USB 设备，不以访问权限作为可见性条件。未授权设备添加后显示限定 VID/PID 的 udev 命令并支持复制。**运行命令后必须拔掉并重新插入设备或接收器，再重新检测。** 当前不覆盖蓝牙 HID 或其他非 HID 外设。
+To update an existing local installation, copy the QML/helper files and atomically replace a running executable (copy to a new filename, then rename). Restart DMS when helper QML or manifests change, since DMS may cache them.
 
-`backend/data/hid-filters.json` 来自当前锁定 helper 中鼠标和键盘协议库的 `SUPPORTED_HID_FILTERS` 合集；升级协议库时同步重新生成。过滤匹配表示可作为协议候选，实际读取仍受 Bridge 已实现的驱动能力限制。
+## License and provenance
 
-已添加设备使用眼睛按钮独立控制状态栏显示，可同时显示多台设备。点击设备图标可切换鼠标／键盘图标；图标仅影响显示，不改变协议驱动。读数按设备分别缓存。同品牌多设备的读取仍受 Bridge 限制，无法可靠定向时会返回错误。
+AGPL-3.0-or-later. See [LICENSE](LICENSE) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Dependency license texts are included in the installable plugin.
 
-## 设备控制弹窗
-
-状态栏点击某台设备会定位到该设备；弹窗顶部也可切换已添加设备。
-提供概览、性能、按键（设备提供防抖字段时）、高级分类，控件按实际读取的字段、
-驱动方法和 UI 能力提示启用。支持 DPI、DPI 档位选择及编辑、回报率、LOD、
-运动同步、直线修正、Ripple control、防抖和休眠。每次只发送一项设置，写入后
-重新读取，读数与目标不一致时报告失败，不把发送成功当作设备设置生效。
-角度微调当前只读；固件仅显示版本，不提供刷写或更新检查。
-电量历史保存在 DMS 插件状态中，最多记录最近七天，每五分钟采一个成功读数。
-
-`get_details` 和 `set_setting` 通过新增的 helper 调用已锁定上游驱动。
-构建部署时，须额外将 `backend/helper/*.mjs` 复制到后端旁的 `native-hid/src/`：
-
-```sh
-cp backend/helper/*.mjs plugin/bin/native-hid/src/
-node --test tests/control.test.mjs
-```
-
-这两个 helper 文件是项目源码，不能只更新 Rust 二进制而遗漏它们。
-
-DPI 档位提供固定宽度的选择按钮、按设备支持值步进的滑块和精确输入。拖动仅预览，松开时写入并回读。
+Developed with AI assistance. The preview is a user-provided screenshot of the plugin, not a new desktop capture.

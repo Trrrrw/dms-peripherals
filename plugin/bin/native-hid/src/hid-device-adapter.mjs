@@ -1,0 +1,287 @@
+// Wraps one or more node-hid devices so together they satisfy the WebHID
+// `HIDDevice` interface mouse-protocol's driver classes are written against
+// (see mouse-protocol/src/drivers/webhid.ts, an ambient-type declaration
+// only — this file is the runtime implementation of that same shape for
+// Node).
+//
+// This lets Bridge reuse OpenMouse's actual, hardware-verified driver
+// classes unmodified: the drivers only ever call the methods below, never
+// touch node-hid directly, and don't know they're not really in a browser.
+//
+// One WebHID `HIDDevice` == one USB/BT *interface*, which can carry several
+// top-level HID collections (e.g. a short and a long report variant on the
+// same vendor interface — this is exactly Logitech's HID++ receiver shape:
+// report 0x10 in one collection, report 0x11 in another, same interface).
+// node-hid enumerates one entry *per collection*, not per interface — on
+// macOS in particular, IOHIDManager opens a separate IOHIDDevice service per
+// top-level collection it finds, each capable of receiving input reports
+// only for the report ids declared in *its own* collection. Opening only
+// one of those, as this adapter used to, can send a query fine and then
+// silently miss the reply if the reply's report id landed on a collection
+// backed by a different node-hid entry. So candidateDevices() groups
+// node-hid's split entries back into one logical device per interface
+// (matched on vendor/product id + node-hid's own `interface` field), and
+// HidDeviceAdapter opens and listens on every split within that group.
+
+import { HID, devices } from "node-hid";
+
+const REPLAY_ID_MAX = 255;
+
+// macOS seizes a device by default when it is opened, which detaches it from
+// the system: a mouse's own pointer collection stops moving the cursor for as
+// long as Bridge holds it. Shared opens leave the OS driver in place. The flag
+// is ignored on Windows and Linux.
+const OPEN_OPTIONS = { nonExclusive: true };
+
+/**
+ * @param {import("node-hid").Device[]} infos - every node-hid entry that
+ *   splits off the same underlying USB/BT interface (see module docs above).
+ */
+export class HidDeviceAdapter {
+  constructor(infos, identity = null, Handle = HID) {
+    const [primary] = infos;
+    this.vendorId = primary.vendorId;
+    this.productId = primary.productId;
+    this.productName = primary.product ?? "";
+    // Real report-descriptor parsing isn't implemented here — callers must
+    // not rely on collections-based `isSupported()` gating (see
+    // native-hid/README.md); construct the known-correct driver class
+    // directly instead.
+    this.collections = [];
+    this.opened = false;
+
+    this._infos = infos;
+    this._identity = identity;
+    this._Handle = Handle;
+    this._devices = [];
+    this._listeners = new Set();
+    this._onData = this._onData.bind(this);
+    this._onError = this._onError.bind(this);
+  }
+
+  async open() {
+    if (this.opened) return;
+    if (this._identity) {
+      let device;
+      try {
+        if (this._infos.length !== 1) throw new Error("native live identity requires one endpoint");
+        device = new this._Handle(this._infos[0].path, OPEN_OPTIONS);
+        const live = device.getDeviceInfo();
+        const fields = ["vendorId", "productId", "path", "serialNumber", "interface"];
+        if (!live || fields.some((field) => live[field] === undefined || live[field] !== this._identity[field])) throw new Error("native live handle identity is missing or changed");
+        device.on("data", this._onData);
+        device.on("error", this._onError);
+        this._devices = [device];
+        this.opened = true;
+        return;
+      } catch (error) {
+        if (device) {
+          try { device.removeAllListeners(); } catch {}
+          try { device.close(); } catch {}
+        }
+        throw new Error(`native live handle identity verification failed: ${error.message}`);
+      }
+    }
+    const openedDevices = [];
+    let lastError = null;
+    for (const info of this._infos) {
+      try {
+        const device = new this._Handle(info.path, OPEN_OPTIONS);
+        device.on("data", this._onData);
+        device.on("error", this._onError);
+        openedDevices.push(device);
+      } catch (err) {
+        lastError = err;
+      }
+    }
+    if (openedDevices.length === 0) {
+      throw lastError ?? new Error("Could not open any HID device path");
+    }
+    this._devices = openedDevices;
+    this.opened = true;
+  }
+
+  async close() {
+    if (!this.opened) return;
+    for (const device of this._devices) {
+      device.removeAllListeners();
+      device.close();
+    }
+    this._devices = [];
+    this.opened = false;
+  }
+
+  /** @param {number} reportId @param {BufferSource} data */
+  async sendReport(reportId, data) {
+    this._requireOpen();
+    const frame = this._frame(reportId, data);
+    // Any split for this interface can carry the write on real hardware —
+    // the split is a macOS/IOHIDManager enumeration artifact per top-level
+    // collection, not a hardware restriction on which handle can transmit
+    // which report id. Writing through all of them costs little (these are
+    // idempotent HID++-style query/set commands, and setDpi/setPollingRate
+    // read back to confirm regardless) and removes any doubt about which
+    // split the device actually expects the write on.
+    let sent = false;
+    let lastError;
+    for (const device of this._devices) {
+      try {
+        device.write(frame);
+        sent = true;
+      } catch (error) {
+        lastError = error;
+      }
+    }
+    if (!sent) throw lastError ?? new Error("No HID interface accepted the report.");
+  }
+
+  /** @param {number} reportId @param {BufferSource} data */
+  async sendFeatureReport(reportId, data) {
+    this._requireOpen();
+    const frame = this._frame(reportId, data);
+    let sent = false;
+    let lastError;
+    for (const device of this._devices) {
+      try {
+        device.sendFeatureReport(frame);
+        sent = true;
+      } catch (error) {
+        lastError = error;
+      }
+    }
+    if (!sent) throw lastError ?? new Error("No HID interface accepted the feature report.");
+  }
+
+  /**
+   * node-hid's `getFeatureReport` needs an expected length; WebHID's
+   * `receiveFeatureReport` does not, because the browser already knows it
+   * from the parsed report descriptor. Drivers here call this with the
+   * length they themselves expect back baked into their own retry/parsing
+   * logic, so a generous fixed buffer (the largest report any known driver
+   * here uses) is safe — short replies are simply the leading bytes of it.
+   *
+   * Classic Razer's control protocol is the largest: 90-byte feature reports
+   * on report id 0 (mouse-protocol/src/razer/codec.ts, RAZER_PACKET_LENGTH =
+   * 90; the Rust transport's per-vendor budget is 91 for it — see
+   * RAZER_FEATURE_BUFFER_LEN in src/hid.rs). Requesting the whole report one
+   * byte at a time would be wrong; request the id byte plus the largest
+   * payload up front: `getFeatureReport` fills its first byte with the
+   * requested report id and returns that id prefix as part of the buffer
+   * (node-hid's HID.cc passes buf[0] on to hidapi, which counts it — the
+   * exact same shape the Rust transport's receive_feature_report() accounts
+   * for with `data[1..size]`). Strip that id byte so the drivers see the
+   * payload they get from WebHID. Some backends omit the id byte entirely;
+   * keep those as-is.
+   *
+   * Tries every split (the report id in question may only be declared on
+   * one of them) and returns the first that answers.
+   */
+  async receiveFeatureReport(reportId) {
+    this._requireOpen();
+    // Largest driver payload (Razer's 90-byte feature report) + the id byte.
+    const requestedLen = 91;
+    let lastError;
+    for (const device of this._devices) {
+      try {
+        // node-hid's sync HID.getFeatureReport returns a number[] (its
+        // HIDAsync variant returns a Buffer), so normalize to Uint8Array
+        // before slicing.
+        const raw = Uint8Array.from(device.getFeatureReport(reportId, requestedLen));
+        const payload = raw.length > 1 && raw[0] === reportId ? raw.subarray(1) : raw;
+        return new DataView(payload.buffer, payload.byteOffset, payload.byteLength);
+      } catch (error) {
+        lastError = error;
+      }
+    }
+    throw lastError ?? new Error("No HID interface answered the feature report request.");
+  }
+
+  /** @param {"inputreport"} type @param {(event: object) => void} listener */
+  addEventListener(type, listener) {
+    if (type !== "inputreport") return;
+    this._listeners.add(listener);
+  }
+
+  /** @param {"inputreport"} type @param {(event: object) => void} listener */
+  removeEventListener(type, listener) {
+    if (type !== "inputreport") return;
+    this._listeners.delete(listener);
+  }
+
+  _requireOpen() {
+    if (!this.opened) throw new Error("The HID device is not open.");
+  }
+
+  /** Report id prefixed onto the write buffer, as node-hid (and the OS HID
+   * stack underneath it) expects for a numbered report. */
+  _frame(reportId, data) {
+    const bytes = data instanceof ArrayBuffer ? new Uint8Array(data) : new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+    if (reportId < 0 || reportId > REPLAY_ID_MAX) throw new Error(`Report id ${reportId} is out of range.`);
+    return [reportId, ...bytes];
+  }
+
+  /** @param {Buffer} data */
+  _onData(data) {
+    // Some backends prefix numbered reports with the report id on read,
+    // some don't (mirrors the same ambiguity the Rust Pulsar driver
+    // handles) — there is no fully reliable way to tell from the bytes
+    // alone, so report id 0 is assumed when in doubt; drivers here match
+    // responses by their own payload content, not strictly by report id.
+    const reportId = data.length > 0 ? data[0] : 0;
+    const payload = data.length > 0 ? data.subarray(1) : data;
+    const view = new DataView(Uint8Array.from(payload).buffer);
+    const event = { reportId, data: view };
+    for (const listener of this._listeners) listener(event);
+  }
+
+  /** @param {Error} error */
+  _onError(error) {
+    // Surfaced to whoever is waiting on a pending exchange via their own
+    // timeout, matching how a real device disconnect looks over WebHID —
+    // there is no dedicated "error" WebHID event drivers here listen for.
+    // Logged so it's not silently swallowed.
+    console.error(`[native-hid] device error: ${error.message}`);
+  }
+}
+
+/**
+ * Lists every HID *interface* for a vendor id, ready to be opened — one
+ * HidDeviceAdapter per interface, merging any node-hid entries that split
+ * off the same interface into separate top-level collections (see module
+ * docs above).
+ * @param {number} vendorId
+ * @returns {HidDeviceAdapter[]}
+ */
+export function candidateDevices(vendorId) {
+  const groups = new Map();
+  for (const info of devices()) {
+    if (info.vendorId !== vendorId) continue;
+    // Skip keyboard collections (macOS denies IOHIDDeviceOpen with privilege violation 0xE00002C1)
+    if (info.usagePage === 1 && info.usage === 6) continue;
+    // Skip standard boot mouse collections (exclusive system cursor access 0xE00002C5, no vendor feature reports)
+    if (info.usagePage === 1 && (info.usage === 1 || info.usage === 2)) continue;
+    const key = `${info.productId}:${info.interface}`;
+    const group = groups.get(key);
+    if (group) group.push(info);
+    else groups.set(key, [info]);
+  }
+  return [...groups.values()].map((infos) => {
+    // Several node-hid entries for one interface commonly share the same
+    // underlying `path` (one physical device, listed once per top-level
+    // collection its descriptor declares) — open each distinct path once.
+    const seen = new Set();
+    const unique = infos.filter((info) => (seen.has(info.path) ? false : seen.add(info.path)));
+    return new HidDeviceAdapter(unique);
+  });
+}
+
+export async function probeVerifiedDevice(info, identity, probe, Handle = HID) {
+  const device = new HidDeviceAdapter([info], identity, Handle);
+  try {
+    await device.open();
+    return await probe(device);
+  } catch (error) {
+    await device.close().catch(() => undefined);
+    throw error;
+  }
+}

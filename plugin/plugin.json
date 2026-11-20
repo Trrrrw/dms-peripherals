@@ -1,7 +1,7 @@
 {
     "id": "openMouse",
-    "name": "OpenMouse",
-    "description": "鼠标电量与设备状态",
+    "name": "Device Deck",
+    "description": "Manage peripherals through OpenMouse",
     "version": "0.1.0",
     "author": "trrrrw",
     "type": "widget",
@@ -19,5 +19,7 @@
         "settings_read",
         "settings_write"
     ],
-    "settings": "./Settings.qml"
+    "settings": "./Settings.qml",
+    "license": "AGPL-3.0-or-later",
+    "requires_dms": ">=2.0.0"
 }
