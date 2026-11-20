@@ -41,6 +41,15 @@ Open its settings to scan and add devices. The eye controls bar visibility; the 
 
 Uninstalling the plugin directory removes its runtime files. DMS-managed settings/history and system udev rules are separate user state.
 
+## Architecture
+
+```mermaid
+flowchart LR
+    UI["DMS Plugin (QML)"] -- "JSONL stdio" --> Host["Rust Host (dms-peripherals)"]
+    Host -- "system node" --> Helper["HID Helper (OpenMouse drivers)"]
+    Helper -- "node-hid" --> Linux["Linux /dev/hidraw*"]
+```
+
 ## Development
 
 Source is in `plugin/` (QML), `backend/src/` (Rust stdio host), and `backend/helper/` (OpenMouse driver integration). The runtime HID adapter is from OpenMouse Bridge at `30a3290ef88200f83a8083a88a3143d5e12eeaa8`.
